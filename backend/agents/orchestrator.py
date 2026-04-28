@@ -2,8 +2,8 @@ import re
 import json
 import os
 from langchain_core.messages import HumanMessage, SystemMessage
-from agents.state import AgentState
-from agents.specialized import get_llm
+from .state import AgentState
+from .specialized import get_llm
 
 
 def detect_language(text: str) -> str:
@@ -48,7 +48,7 @@ def orchestrator_node(state: AgentState):
 
     # 2. Try LLM-based Orchestration if key is available
     llm = get_llm("ORCHESTRATOR")
-    from agents.specialized import MockLLM
+    from .specialized import MockLLM
 
     if not isinstance(llm, MockLLM):
         try:

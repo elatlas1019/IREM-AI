@@ -1,8 +1,8 @@
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
-from agents.state import AgentState
-from agents.orchestrator import orchestrator_node
-from agents.specialized import goal_node, plan_node, feedback_node, motivation_node, health_node, teach_node
+from .state import AgentState
+from .orchestrator import orchestrator_node
+from .specialized import goal_node, plan_node, feedback_node, motivation_node, health_node, teach_node
 
 # Create the graph
 workflow = StateGraph(AgentState)

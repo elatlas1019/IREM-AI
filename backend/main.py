@@ -8,7 +8,7 @@ from fastapi import FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconn
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import models, schemas, database
-from agents.graph import coaching_agent_app
+from .agents.graph import coaching_agent_app
 from langchain_core.messages import HumanMessage
 
 from fastapi.staticfiles import StaticFiles

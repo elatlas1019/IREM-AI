@@ -60,6 +60,13 @@ ANTHROPIC_API_KEY=your_key_here
 ```
 
 ### 4. Run / Çalıştır
+
+#### Option A: Streamlit (Recommended for Cloud)
+```bash
+streamlit run app.py
+```
+
+#### Option B: FastAPI + Vanilla JS
 ```bash
 cd backend
 python -m uvicorn main:app --reload
