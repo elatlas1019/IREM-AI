@@ -6,7 +6,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
 from backend.agents.graph import coaching_agent_app
-from backend.main import generate_pdf_logic # We'll expose this if possible or recreate it
+from backend.main import create_pdf_buffer
 
 # Load env
 load_dotenv()
@@ -158,11 +158,14 @@ with col2:
         st.markdown(f"### {last_doc['agent']}")
         st.markdown(last_doc['content'])
         
-        # PDF Export (Simplified)
-        if st.button("📄 PDF Olarak İndir"):
-            st.warning("PDF oluşturuluyor...")
-            # Here we would call reportlab logic
-            st.info("PDF özelliği Streamlit Cloud için yapılandırılıyor.")
+        # PDF Export
+        pdf_buffer = create_pdf_buffer(last_doc['content'], f"IREM AI - {last_doc['agent']}")
+        st.download_button(
+            label="📄 PDF Olarak İndir",
+            data=pdf_buffer,
+            file_name=f"irem_ai_{last_doc['agent'].lower()}.pdf",
+            mime="application/pdf"
+        )
     else:
         st.markdown("""
             <div style="text-align:center; padding: 2rem; background: rgba(255,255,255,0.05); border-radius: 20px;">

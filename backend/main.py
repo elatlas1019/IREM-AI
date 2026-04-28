@@ -7,7 +7,7 @@ load_dotenv()
 from fastapi import FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-import models, schemas, database
+from . import models, schemas, database
 from .agents.graph import coaching_agent_app
 from langchain_core.messages import HumanMessage
 
@@ -98,12 +98,7 @@ from reportlab.lib.units import cm
 import io
 
 
-@app.post("/api/generate-pdf")
-async def generate_pdf(request: Request):
-    body = await request.json()
-    content = body.get("content", "İçerik yok")
-    title_text = body.get("title", "IREM AI - Not")
-    
+def create_pdf_buffer(content, title_text="IREM AI - Not"):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
     styles = getSampleStyleSheet()
@@ -115,7 +110,7 @@ async def generate_pdf(request: Request):
         fontName=DEFAULT_FONT,
         fontSize=22,
         spaceAfter=20,
-        textColor='#7C3AED' # var(--primary)
+        textColor='#7C3AED'
     )
     
     normal_style = ParagraphStyle(
@@ -127,17 +122,30 @@ async def generate_pdf(request: Request):
         spaceAfter=10
     )
     
-    footer_style = ParagraphStyle(
-        'CustomFooter',
-        parent=styles['Normal'],
-        fontName=DEFAULT_FONT,
-        fontSize=9,
-        textColor='#94A3B8',
-        alignment=TA_CENTER
-    )
-    
     story = []
     story.append(Paragraph(title_text, title_style))
+    story.append(Spacer(1, 12))
+    
+    # Simple Markdown-ish to PDF conversion
+    lines = content.split('\n')
+    for line in lines:
+        if line.strip():
+            # Basic support for bold/italic in reportlab Paragraph
+            line = html.escape(line)
+            line = line.replace('**', '<b>').replace('__', '<i>') # Note: this is very basic
+            story.append(Paragraph(line, normal_style))
+    
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
+
+@app.post("/api/generate-pdf")
+async def generate_pdf_endpoint(request: Request):
+    body = await request.json()
+    content = body.get("content", "İçerik yok")
+    title_text = body.get("title", "IREM AI - Not")
+    buffer = create_pdf_buffer(content, title_text)
+    return StreamingResponse(buffer, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=not.pdf"})
     story.append(Spacer(1, 0.5*cm))
     
     for line in content.split('\n'):
