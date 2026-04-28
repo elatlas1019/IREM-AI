@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IREM AI — Akıllı Eğitim Koçu</title>
+    <meta name="description" content="IREM AI: Kişisel öğrenme ve duygusal koçunuz. Study smarter, feel better.">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --primary: #7C3AED;
+            --primary-dark: #6D28D9;
+            --accent: #F97316;
+            --accent2: #EC4899;
+            --success: #10B981;
+            --bg: #0F0A1E;
+            --bg-card: #1A1035;
+            --bg-card2: rgba(26,16,53,0.8);
+            --sidebar-from: #1A1035;
+            --sidebar-to: #0F0A1E;
+            --text: #F8FAFC;
+            --text-dim: #94A3B8;
+            --border: rgba(124,58,237,0.2);
+            --border-light: rgba(255,255,255,0.08);
+            --shadow: rgba(124,58,237,0.25);
+        }
+        *{margin:0;padding:0;box-sizing:border-box;font-family:'Outfit',sans-serif;}
+        body{background:var(--bg);color:var(--text);height:100vh;display:flex;overflow:hidden;flex-direction:row;}
+        /* ── SIDEBAR ── */
+        aside{width:200px;background:linear-gradient(180deg,var(--sidebar-from),var(--sidebar-to));border-right:1px solid var(--border);display:flex;flex-direction:column;padding:1.2rem;z-index:100;flex-shrink:0;}
+        .logo{font-size:1.7rem;font-weight:800;margin-bottom:2rem;background:linear-gradient(135deg,var(--primary),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:flex;align-items:center;gap:10px;}
+        nav{display:flex;flex-direction:column;gap:.4rem;flex:1;}
+        nav button{background:transparent;border:none;color:var(--text-dim);padding:.8rem 1.1rem;text-align:left;border-radius:14px;cursor:pointer;transition:all .25s ease;font-size:.95rem;display:flex;align-items:center;gap:10px;width:100%;}
+        nav button:hover{background:rgba(124,58,237,.12);color:var(--primary);transform:translateX(4px);}
+        nav button.active{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;box-shadow:0 8px 20px -4px var(--shadow);}
+        .energy-widget{background:rgba(255,255,255,.04);border:1px solid var(--border-light);border-radius:16px;padding:.9rem;margin-top:1rem;}
+        .energy-bar-bg{height:5px;background:rgba(255,255,255,.1);border-radius:3px;margin-top:6px;overflow:hidden;}
+        .energy-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--primary));width:60%;transition:width .5s ease;}
+        .user-card{margin-top:1.2rem;padding-top:1.2rem;border-top:1px solid var(--border-light);display:flex;align-items:center;gap:10px;}
+        .user-avatar{width:38px;height:38px;background:linear-gradient(135deg,var(--primary),var(--accent));border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;flex-shrink:0;}
+        /* ── MAIN ── */
+        main{flex:1;display:flex;flex-direction:column;padding:1.5rem;min-width:0;overflow:hidden;height:100vh;}
+        .main-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.2rem;}
+        .header-left h2{font-size:1.6rem;font-weight:700;}
+        .header-desc{font-size:.9rem;color:var(--text-dim);margin-top:4px;padding:3px 12px;border-radius:8px;border-left:3px solid var(--primary);background:rgba(124,58,237,.06);}
+        .header-actions{display:flex;gap:.75rem;align-items:center;}
+        /* ── PANELS ── */
+        .panel{display:none;flex:1;min-height:0;height:100%;}
+        .panel.active{display:flex;flex-direction:column;overflow:hidden;}
+        /* Non-dashboard panels should allow internal scrolling if they are just lists */
+        #goals-panel.active, #calendar-panel.active, #analytics-panel.active { overflow-y: auto; padding-bottom: 2rem; }
+        /* ── DASHBOARD / CHAT ── */
+        .workspace{display:flex;gap:1.2rem;flex:1;min-height:0;height:100%;}
+        .chat-section{flex:1.1;display:flex;flex-direction:column;background:var(--bg-card2);backdrop-filter:blur(12px);border-radius:24px;border:1px solid var(--border);overflow:hidden;box-shadow:0 20px 40px -10px rgba(0,0,0,.5);}
+        #chat-messages{flex:1;padding:1.5rem;overflow-y:auto;display:flex;flex-direction:column;gap:1.2rem;scroll-behavior:smooth;}
+        .message{max-width:85%;padding:1.1rem 1.3rem;border-radius:20px;line-height:1.65;font-size:1rem;animation:slideUp .25s ease-out;}
+        @keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        .user-message{align-self:flex-end;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;border-bottom-right-radius:4px;box-shadow:0 8px 20px -4px var(--shadow);}
+        .assistant-message{align-self:flex-start;background:rgba(255,255,255,.05);border:1px solid var(--border-light);border-bottom-left-radius:4px;}
+        .assistant-message.motivation-msg{border-left:4px solid var(--accent2);background:rgba(236,72,153,.07);}
+        .agent-tag{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:.4rem;display:block;color:var(--primary);opacity:.8;}
+        .agent-tag.tag-MOTIVATION{color:var(--accent2);}
+        .agent-tag.tag-PLAN{color:var(--success);}
+        .agent-tag.tag-TEACH{color:var(--accent);}
+        .agent-tag.tag-HEALTH{color:#06B6D4;}
+        .agent-tag.tag-FEEDBACK{color:#F59E0B;}
+        .agent-tag.tag-GOAL{color:#8B5CF6;}
+        .chat-input-wrapper{padding:1.1rem 1.2rem;background:rgba(0,0,0,.25);border-top:1px solid var(--border-light);}
+        .chat-input-area{background:rgba(255,255,255,.05);border:1px solid var(--border-light);border-radius:16px;padding:.4rem;display:flex;gap:.4rem;align-items:center;}
+        .chat-input-area:focus-within{border-color:var(--primary);}
+        input[type="text"],input[type="number"],input[type="date"],select,textarea{background:rgba(255,255,255,.05);border:1px solid var(--border-light);border-radius:12px;color:var(--text);padding:.7rem 1rem;font-size:.95rem;outline:none;font-family:'Outfit',sans-serif;transition:border .2s;}
+        input[type="text"]:focus,input[type="number"]:focus,input[type="date"]:focus,select:focus,textarea:focus{border-color:var(--primary);}
+        select option{background:#1A1035;color:#fff;}
+        #chat-input-field{background:transparent;border:none;color:#fff;padding:.7rem 1rem;font-size:.97rem;outline:none;flex:1;min-width:0;}
+        .btn-send{background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;border:none;width:40px;height:40px;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.25s;flex-shrink:0;}
+        .btn-send:hover{transform:scale(1.08);}
+        .btn-send:disabled{opacity:.5;transform:none;}
+        /* ── DOC PANEL ── */
+        .doc-section{flex:1.4;display:flex;flex-direction:column;background:var(--bg-card2);backdrop-filter:blur(12px);border-radius:24px;border:1px solid var(--border);padding:2rem;overflow:hidden;}
+        .doc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--border-light);}
+        #doc-content{flex:1;overflow-y:auto;font-size:1.05rem;line-height:1.8;padding-right:10px;}
+        #doc-content table{width:100%;border-collapse:collapse;margin:1rem 0;}
+        #doc-content th,#doc-content td{padding:10px;border:1px solid var(--border-light);text-align:left;}
+        #doc-content th{background:rgba(124,58,237,.12);color:var(--primary);}
+        /* ── CARDS / GRID ── */
+        .card{background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:1.3rem;}
+        .goals-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:1.1rem;overflow-y:auto;padding:.2rem;}
+        .goal-card{background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:1.2rem;display:flex;flex-direction:column;gap:.6rem;animation:slideUp .3s ease;}
+        .subject-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+        .badge-Matematik{background:rgba(124,58,237,.2);color:#A78BFA;}
+        .badge-Fen{background:rgba(16,185,129,.2);color:#34D399;}
+        .badge-Türkçe{background:rgba(249,115,22,.2);color:#FB923C;}
+        .badge-İngilizce{background:rgba(6,182,212,.2);color:#22D3EE;}
+        .badge-Diğer{background:rgba(148,163,184,.2);color:#CBD5E1;}
+        /* ── BUTTONS ── */
+        .btn-pill{background:rgba(255,255,255,.05);border:1px solid var(--border-light);color:var(--text);padding:.45rem 1.1rem;border-radius:50px;cursor:pointer;transition:.25s;font-size:.88rem;font-family:'Outfit',sans-serif;}
+        .btn-pill:hover{background:rgba(124,58,237,.15);border-color:var(--primary);}
+        .btn-primary{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;border:none;padding:.7rem 1.4rem;border-radius:14px;cursor:pointer;font-weight:600;font-size:.95rem;transition:.25s;font-family:'Outfit',sans-serif;}
+        .btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 20px -4px var(--shadow);}
+        .btn-danger{background:rgba(239,68,68,.15);color:#F87171;border:1px solid rgba(239,68,68,.3);padding:.4rem .9rem;border-radius:10px;cursor:pointer;font-size:.82rem;transition:.2s;font-family:'Outfit',sans-serif;}
+        .btn-danger:hover{background:rgba(239,68,68,.25);}
+        /* ── ANALYTICS ── */
+        .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.2rem;}
+        .stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:1.2rem;text-align:center;}
+        .stat-value{font-size:2.2rem;font-weight:800;margin:.3rem 0;}
+        .bar-chart{display:flex;align-items:flex-end;gap:.6rem;height:120px;margin-top:1.2rem;}
+        .bar-wrapper{flex:1;display:flex;flex-direction:column;align-items:center;gap:.4rem;height:100%;}
+        .bar{width:100%;border-radius:6px 6px 0 0;background:linear-gradient(180deg,var(--primary),var(--accent2));min-height:4px;transition:height .4s ease;}
+        .bar-label{font-size:.7rem;color:var(--text-dim);}
+        /* ── CALENDAR ── */
+        .week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:.6rem;}
+        .day-col{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:.8rem .6rem;display:flex;flex-direction:column;gap:.4rem;min-height:120px;}
+        .day-header{font-weight:700;font-size:.8rem;color:var(--text-dim);text-align:center;}
+        .day-num{font-size:1.1rem;font-weight:700;text-align:center;margin-bottom:.2rem;}
+        .day-num.today{color:var(--primary);}
+        .session-chip{background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.3);color:#C4B5FD;border-radius:6px;padding:2px 6px;font-size:.67rem;font-weight:600;}
+        /* ── SETTINGS OVERLAY ── */
+        #settings-overlay{position:fixed;top:0;right:-420px;width:400px;height:100vh;background:var(--bg-card);border-left:1px solid var(--border);z-index:9999;padding:2rem;display:flex;flex-direction:column;gap:1.2rem;transition:right .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;box-shadow:-20px 0 60px rgba(0,0,0,.5);}
+        #settings-overlay.open{right:0;}
+        #settings-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9998;display:none;backdrop-filter:blur(3px);}
+        #settings-backdrop.open{display:block;}
+        .settings-section{display:flex;flex-direction:column;gap:.6rem;}
+        .settings-section label{font-size:.83rem;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+        /* ── SCROLLBAR ── */
+        ::-webkit-scrollbar{width:8px;}
+        ::-webkit-scrollbar-track{background:rgba(255,255,255,0.02);}
+        ::-webkit-scrollbar-thumb{background:rgba(124,58,237,0.6);border-radius:10px;}
+        ::-webkit-scrollbar-thumb:hover{background:var(--primary);}
+        /* ── FORM ROW ── */
+        .form-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:.8rem;align-items:end;}
+        .form-group{display:flex;flex-direction:column;gap:.4rem;}
+        .form-group label{font-size:.8rem;color:var(--text-dim);font-weight:600;}
+        .empty-state{text-align:center;color:var(--text-dim);padding:3rem 1rem;display:flex;flex-direction:column;align-items:center;gap:.8rem;}
+        .empty-state span{font-size:3rem;}
+        /* ── QUOTE BANNER ENHANCED ── */
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-5px); }
+        }
+        @keyframes slideInRight {
+          from { opacity: 0; transform: translateX(30px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        #daily-quote-card {
+          background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(236, 72, 153, 0.15)) !important;
+          border: 1px solid rgba(236, 72, 153, 0.5) !important;
+          box-shadow: 0 0 20px rgba(124, 58, 237, 0.3), inset 0 0 15px rgba(236, 72, 153, 0.2) !important;
+          animation: float 4s ease-in-out infinite !important;
+          margin-bottom: 1.5rem;
+          border-radius: 20px;
+          padding: 15px 24px;
+          text-align: center;
+          position: relative;
+          overflow: hidden;
+          max-width: 800px;
+          margin-left: auto;
+          margin-right: auto;
+        }
+        #daily-quote-card::before {
+          content: '';
+          position: absolute;
+          top: -50%; left: -50%; width: 200%; height: 200%;
+          background: radial-gradient(circle, rgba(124, 58, 237, 0.1) 0%, transparent 70%);
+          pointer-events: none;
+        }
+        #dq-text {
+          font-size: 1.2rem !important;
+          font-weight: 700 !important;
+          color: #fff !important;
+          line-height: 1.5 !important;
+          text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+        #dq-author {
+          font-size: 0.95rem !important;
+          font-weight: 600 !important;
+          color: #F472B6 !important;
+          margin-top: 10px;
+          opacity: 0.9;
+        }
+        /* ── VOICE PULSE ── */
+        @keyframes pulse {
+          0% { box-shadow: 0 0 0 0 rgba(244, 114, 182, 0.4); }
+          70% { box-shadow: 0 0 0 10px rgba(244, 114, 182, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(244, 114, 182, 0); }
+        }
+        .listening {
+          animation: pulse 1.5s infinite;
+          background: rgba(244, 114, 182, 0.1) !important;
+          border-color: #F472B6 !important;
+          color: #F472B6 !important;
+        }
+    </style>
+</head>
+<body>
+<!-- ═══════════════════════════ SIDEBAR ═══════════════════════════ -->
+<aside>
+    <div class="logo">💠 IREM AI</div>
+    <nav>
+        <button id="nav-dashboard" class="active" onclick="showPanel('dashboard')">
+            🏠 <span data-i18n="nav_dashboard">Dashboard</span>
+        </button>
+        <button id="nav-goals" onclick="showPanel('goals')">
+            🎯 <span data-i18n="nav_goals">Hedeflerim</span>
+        </button>
+        <button id="nav-calendar" onclick="showPanel('calendar')">
+            📅 <span data-i18n="nav_calendar">Takvim</span>
+        </button>
+        <button id="nav-analytics" onclick="showPanel('analytics')">
+            📊 <span data-i18n="nav_analytics">Analitik</span>
+        </button>
+    </nav>
+
+    <div class="energy-widget">
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;">
+            <span data-i18n="energy">Enerji</span>
+            <span id="energy-gauge">6/10</span>
+        </div>
+        <div class="energy-bar-bg"><div id="energy-bar" class="energy-bar-fill"></div></div>
+        <p id="sentiment-text" style="font-size:.72rem;color:var(--text-dim);margin-top:6px;">✨ Ruh Hali: Nötr</p>
+    </div>
+
+    <div class="user-card">
+        <div class="user-avatar" id="user-avatar-letter">M</div>
+        <div>
+            <p id="display-name" style="font-size:.88rem;font-weight:600;" data-i18n-default="Misafir">Misafir</p>
+            <p style="font-size:.72rem;color:var(--success);">● Online</p>
+        </div>
+    </div>
+</aside>
+
+<!-- ═══════════════════════════ MAIN ═══════════════════════════ -->
+<main>
+    <div class="main-header">
+        <div class="header-left">
+            <h2 id="panel-title" data-i18n="welcome">Hoş Geldin! 👋</h2>
+            <p id="panel-desc" class="header-desc" data-i18n="welcome_desc">Koçunla sohbet et, planını oluştur, hedeflerini takip et!</p>
+        </div>
+        <div class="header-actions">
+            <button id="lang-toggle" class="btn-pill" onclick="switchLang()">🇬🇧 EN</button>
+            <button class="btn-pill" onclick="openSettings()" aria-label="Settings">⚙️</button>
+        </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="dashboard-panel" class="panel active">
+        <div id="daily-quote-card">
+            <div style="font-size:11px;color:#F472B6;font-weight:800;letter-spacing:2px;margin-bottom:10px;text-transform:uppercase;">✨ GÜNÜN SÖZÜ</div>
+            <div id="dq-text"></div>
+            <div id="dq-author"></div>
+        </div>
+        <div class="workspace">
+            <section class="chat-section">
+                <div id="chat-messages">
+                </div>
+                <div class="chat-input-wrapper">
+                    <div class="chat-input-area">
+                        <input type="text" id="chat-input-field" data-i18n-placeholder="placeholder" placeholder="Zihin koçun burada, hadi konuşalım...">
+                        <button id="mic-btn" onclick="toggleVoice()" style="background:transparent;border:1.5px solid rgba(124,58,237,0.4);border-radius:50%;width:42px;height:42px;font-size:18px;cursor:pointer;transition:all 0.2s;flex-shrink:0;">🎤</button>
+                        <button class="btn-send" id="send-btn" onclick="sendMessage()" aria-label="Send">🚀</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="doc-section">
+                <div class="doc-header">
+                    <h3 id="doc-title" data-i18n="workspace">Çalışma Alanı</h3>
+                    <button class="btn-pill" id="pdf-btn" onclick="downloadPDF()" style="display:none;" data-i18n="download_pdf">📄 PDF Al</button>
+                </div>
+                <div id="doc-content">
+                    <div class="empty-state">
+                        <span>📂</span>
+                        <p data-i18n="workspace_empty">Oluşturulan planlar ve dökümanlar burada görünecek.</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- GOALS -->
+    <div id="goals-panel" class="panel" style="flex-direction:column;gap:1rem;overflow-y:auto;">
+        <div class="card">
+            <h3 style="margin-bottom:1rem;" data-i18n="add_goal">Yeni Hedef Ekle</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label data-i18n="goal_title_label">Hedef Başlığı</label>
+                    <input type="text" id="goal-title" data-i18n-placeholder="goal_title_ph" placeholder="Ne başarmak istiyorsun?">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="goal_subject_label">Ders / Alan</label>
+                    <select id="goal-subject">
+                        <option value="Matematik">Matematik</option>
+                        <option value="Fen">Fen Bilimleri</option>
+                        <option value="Türkçe">Türkçe</option>
+                        <option value="İngilizce">İngilizce</option>
+                        <option value="Diğer">Diğer</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="goal_date_label">Hedef Tarihi</label>
+                    <input type="date" id="goal-date">
+                </div>
+                <button class="btn-primary" onclick="addGoal()" data-i18n="goal_save_btn">Kaydet</button>
+            </div>
+        </div>
+        <div id="goals-list" class="goals-grid"></div>
+    </div>
+
+    <!-- CALENDAR -->
+    <div id="calendar-panel" class="panel" style="flex-direction:column;gap:1rem;overflow-y:auto;">
+        <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                <h3 data-i18n="log_session">Çalışma Kaydı Ekle</h3>
+            </div>
+            <div class="form-row" style="grid-template-columns: 1.2fr 1fr 1fr 1fr 1fr auto; gap: 0.5rem;">
+                <div class="form-group">
+                    <label data-i18n="session_subject">Ders</label>
+                    <select id="session-subject">
+                        <option value="Matematik">Matematik</option>
+                        <option value="Fen">Fen Bilimleri</option>
+                        <option value="Türkçe">Türkçe</option>
+                        <option value="İngilizce">İngilizce</option>
+                        <option value="Diğer">Diğer</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="session_date">Tarih</label>
+                    <input type="date" id="session-date">
+                </div>
+                <div class="form-group">
+                    <label>Başlangıç</label>
+                    <input type="time" id="session-start">
+                </div>
+                <div class="form-group">
+                    <label>Bitiş</label>
+                    <input type="time" id="session-end">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="session_duration">Süre (dk)</label>
+                    <input type="number" id="session-duration" min="1" max="480" placeholder="45">
+                </div>
+                <button class="btn-primary" onclick="addSession()" style="align-self:end; margin-bottom: 2px;">+</button>
+            </div>
+        </div>
+        <div>
+            <h3 style="margin-bottom:.8rem;" id="week-label">Bu Hafta</h3>
+            <div class="week-grid" id="week-grid"></div>
+        </div>
+    </div>
+
+    <!-- ANALYTICS -->
+    <div id="analytics-panel" class="panel" style="flex-direction:column;gap:1rem;overflow-y:auto;">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <p style="color:var(--text-dim);font-size:.83rem;" data-i18n="stat_hours">Bu Hafta (Saat)</p>
+                <div class="stat-value" id="stat-hours" style="color:var(--primary);">0</div>
+            </div>
+            <div class="stat-card">
+                <p style="color:var(--text-dim);font-size:.83rem;" data-i18n="stat_goals">Hedefler</p>
+                <div class="stat-value" id="stat-goals" style="color:var(--accent);">0</div>
+            </div>
+            <div class="stat-card">
+                <p style="color:var(--text-dim);font-size:.83rem;" data-i18n="stat_streak">Seri (Gün)</p>
+                <div class="stat-value" id="stat-streak" style="color:var(--success);">0</div>
+            </div>
+        </div>
+        <div class="card">
+            <h3 data-i18n="weekly_activity">Son 7 Gün Aktivite</h3>
+            <div class="bar-chart" id="activity-chart"></div>
+        </div>
+    </div>
+</main>
+
+<!-- ═══════════════════════════ SETTINGS OVERLAY ═══════════════════════════ -->
+<div id="settings-backdrop" onclick="closeSettings()"></div>
+<div id="settings-overlay">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h3 data-i18n="settings">⚙️ Ayarlar</h3>
+        <button class="btn-pill" onclick="closeSettings()">✕</button>
+    </div>
+
+    <div class="settings-section">
+        <label data-i18n="settings_name_label">GÖRÜNEN AD</label>
+        <input type="text" id="settings-name" data-i18n-placeholder="settings_name_ph" placeholder="Adınız" oninput="updateName()">
+        <p style="font-size:.78rem;color:var(--text-dim);" data-i18n="settings_name_hint">Koçunuz sizi bu isimle çağıracak.</p>
+    </div>
+
+    <div class="settings-section">
+        <label data-i18n="settings_lang_label">DİL / LANGUAGE</label>
+        <div style="display:flex;gap:.6rem;">
+            <button class="btn-pill" id="lang-tr-btn" onclick="setLang('tr')" style="flex:1;">🇹🇷 Türkçe</button>
+            <button class="btn-pill" id="lang-en-btn" onclick="setLang('en')" style="flex:1;">🇬🇧 English</button>
+        </div>
+    </div>
+
+    <div class="settings-section">
+        <label data-i18n="settings_theme_label">TEMA</label>
+        <button class="btn-pill" onclick="toggleTheme()" style="width:100%;padding:.7rem;" data-i18n="settings_theme_btn">🌙 Gece / ☀️ Gündüz</button>
+    </div>
+
+    <div class="settings-section" style="margin-top:auto;padding-top:1rem;border-top:1px solid var(--border-light);">
+        <p style="font-size:.75rem;color:var(--text-dim);">IREM AI v2.0 — Powered by LangGraph + FastAPI</p>
+    </div>
+</div>
+<script>
+// ══════════════════════════════════════════════════════════════
+// i18n
+// ══════════════════════════════════════════════════════════════
+const TRANSLATIONS = {
+    tr: {
+        nav_dashboard:"Dashboard", nav_goals:"Hedeflerim", nav_calendar:"Takvim", nav_analytics:"Analitik",
+        energy:"Enerji", welcome:"Hoş Geldin! 👋", welcome_desc:"Koçunla sohbet et, planını oluştur, hedeflerini takip et!",
+        goals_title:"Hedeflerim 🎯", goals_desc:"Başarmak istediğin hedefleri ekle ve takip et.",
+        calendar_title:"Takvim 📅", calendar_desc:"Çalışma seanslarını kaydet ve günlük ilerlemeyi gör.",
+        analytics_title:"Analitik 📊", analytics_desc:"Performansını grafiklerle incele.",
+        settings:"⚙️ Ayarlar", workspace:"Çalışma Alanı", workspace_empty:"Oluşturulan planlar burada görünecek.",
+        placeholder:"Zihin koçun burada, hadi konuşalım...",
+        add_goal:"Yeni Hedef Ekle", goal_title_label:"Hedef Başlığı", goal_title_ph:"Ne başarmak istiyorsun?",
+        goal_subject_label:"Ders / Alan", goal_date_label:"Hedef Tarihi", goal_save_btn:"Kaydet",
+        goal_delete:"Sil", goals_empty:"Henüz hedef eklemedin 🎯", goals_empty_sub:"Yukarıdaki formu kullanarak ilk hedefini ekle!",
+        log_session:"Çalışma Kaydı Ekle", session_subject:"Ders", session_duration:"Süre (dk)",
+        session_date:"Tarih", session_save_btn:"Ekle", week_label:"Bu Hafta",
+        stat_hours:"Bu Hafta (Saat)", stat_goals:"Hedefler", stat_streak:"Seri (Gün)",
+        weekly_activity:"Son 7 Gün Aktivite", download_pdf:"📄 PDF Al",
+        settings_name_label:"GÖRÜNEN AD", settings_name_ph:"Adınız",
+        settings_name_hint:"Koçunuz sizi bu isimle çağıracak.",
+        settings_lang_label:"DİL / LANGUAGE", settings_theme_label:"TEMA",
+        settings_theme_btn:"🌙 Gece / ☀️ Gündüz", mood:"Ruh Hali",
+        mood_neutral:"Nötr", mood_positive:"Pozitif", mood_tired:"Yorgun", mood_anxious:"Endişeli",
+        connecting:"Bağlanıyor...", connected:"Bağlandı ✅", disconnected:"Bağlantı Kesildi ❌",
+    },
+    en: {
+        nav_dashboard:"Dashboard", nav_goals:"My Goals", nav_calendar:"Calendar", nav_analytics:"Analytics",
+        energy:"Energy", welcome:"Welcome! 👋", welcome_desc:"Chat with your coach, build plans, and track your goals!",
+        goals_title:"My Goals 🎯", goals_desc:"Add and track your goals.",
+        calendar_title:"Calendar 📅", calendar_desc:"Log study sessions and see your daily progress.",
+        analytics_title:"Analytics 📊", analytics_desc:"Review your performance with charts.",
+        settings:"⚙️ Settings", workspace:"Workspace", workspace_empty:"Generated plans and documents will appear here.",
+        placeholder:"Your mind coach is here, let's talk...",
+        add_goal:"Add New Goal", goal_title_label:"Goal Title", goal_title_ph:"What do you want to achieve?",
+        goal_subject_label:"Subject / Field", goal_date_label:"Target Date", goal_save_btn:"Save",
+        goal_delete:"Delete", goals_empty:"No goals yet 🎯", goals_empty_sub:"Use the form above to add your first goal!",
+        log_session:"Log Study Session", session_subject:"Subject", session_duration:"Duration (min)",
+        session_date:"Date", session_save_btn:"Add", week_label:"This Week",
+        stat_hours:"This Week (Hours)", stat_goals:"Goals", stat_streak:"Streak (Days)",
+        weekly_activity:"Last 7 Days Activity", download_pdf:"📄 Download PDF",
+        settings_name_label:"DISPLAY NAME", settings_name_ph:"Your Name",
+        settings_name_hint:"Your coach will call you by this name.",
+        settings_lang_label:"LANGUAGE", settings_theme_label:"THEME",
+        settings_theme_btn:"🌙 Dark / ☀️ Light", mood:"Mood",
+        mood_neutral:"Neutral", mood_positive:"Positive", mood_tired:"Tired", mood_anxious:"Anxious",
+        connecting:"Connecting...", connected:"Connected ✅", disconnected:"Disconnected ❌",
+    }
+};
+
+let currentLang = localStorage.getItem("irem_lang") || "tr";
+function t(key){ return (TRANSLATIONS[currentLang]||TRANSLATIONS.tr)[key] || key; }
+
+function applyTranslations(){
+    document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n); });
+    document.querySelectorAll("[data-i18n-placeholder]").forEach(el => { el.placeholder = t(el.dataset.i18nPlaceholder); });
+    const lb = document.getElementById("lang-toggle");
+    if(lb) lb.textContent = currentLang === "tr" ? "🇬🇧 EN" : "🇹🇷 TR";
+    highlightLangBtns();
+}
+
+function switchLang(){
+    currentLang = currentLang === "tr" ? "en" : "tr";
+    localStorage.setItem("irem_lang", currentLang);
+    applyTranslations();
+    showPanel(activePanel);
+}
+
+function setLang(lang){
+    currentLang = lang;
+    localStorage.setItem("irem_lang", lang);
+    applyTranslations();
+    showPanel(activePanel);
+}
+
+function highlightLangBtns(){
+    document.getElementById("lang-tr-btn")?.style.setProperty("border-color", currentLang==="tr"?"var(--primary)":"var(--border-light)");
+    document.getElementById("lang-en-btn")?.style.setProperty("border-color", currentLang==="en"?"var(--primary)":"var(--border-light)");
+}
+
+// ══════════════════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════════════════
+let activePanel = "dashboard";
+
+const PANEL_META = {
+    dashboard:{ titleKey:"welcome", descKey:"welcome_desc" },
+    goals:    { titleKey:"goals_title", descKey:"goals_desc" },
+    calendar: { titleKey:"calendar_title", descKey:"calendar_desc" },
+    analytics:{ titleKey:"analytics_title", descKey:"analytics_desc" },
+};
+
+function showPanel(id){
+    activePanel = id;
+    document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+    const el = document.getElementById(id+"-panel");
+    if(el) el.classList.add("active");
+    document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));
+    const nb = document.getElementById("nav-"+id);
+    if(nb) nb.classList.add("active");
+    const meta = PANEL_META[id]||PANEL_META.dashboard;
+    document.getElementById("panel-title").textContent = t(meta.titleKey);
+    document.getElementById("panel-desc").textContent = t(meta.descKey);
+    if(id==="analytics") renderAnalytics();
+    if(id==="goals") renderGoals();
+    if(id==="calendar") renderCalendar();
+}
+
+// ══════════════════════════════════════════════════════════════
+// GOALS
+// ══════════════════════════════════════════════════════════════
+function getGoals(){ return JSON.parse(localStorage.getItem("irem_goals")||"[]"); }
+function saveGoals(g){ localStorage.setItem("irem_goals", JSON.stringify(g)); }
+
+function addGoal(){
+    const title = document.getElementById("goal-title").value.trim();
+    const subject = document.getElementById("goal-subject").value;
+    const date = document.getElementById("goal-date").value;
+    if(!title){ document.getElementById("goal-title").focus(); return; }
+    const goals = getGoals();
+    goals.unshift({ id: Date.now(), title, subject, date, done:false });
+    saveGoals(goals);
+    document.getElementById("goal-title").value = "";
+    renderGoals();
+}
+
+function deleteGoal(id){
+    saveGoals(getGoals().filter(g=>g.id!==id));
+    renderGoals();
+    renderAnalytics();
+}
+
+function renderGoals(){
+    const list = document.getElementById("goals-list");
+    const goals = getGoals();
+    if(goals.length===0){
+        list.innerHTML = `<div class="card" style="grid-column:1/-1;"><div class="empty-state"><span>🎯</span><p>${t("goals_empty")}</p><p style="font-size:.83rem;">${t("goals_empty_sub")}</p></div></div>`;
+        return;
+    }
+    const badgeClass = { Matematik:"badge-Matematik", Fen:"badge-Fen", "Türkçe":"badge-Türkçe", "İngilizce":"badge-İngilizce", "Diğer":"badge-Diğer" };
+    list.innerHTML = goals.map(g=>`
+        <div class="goal-card">
+            <span class="subject-badge ${badgeClass[g.subject]||"badge-Diğer"}">${g.subject}</span>
+            <h4 style="font-size:1rem;">${g.title}</h4>
+            ${g.date?`<p style="font-size:.78rem;color:var(--text-dim);">📅 ${g.date}</p>`:""}
+            <div style="margin-top:.3rem;">
+                <button class="btn-danger" onclick="deleteGoal(${g.id})">${t("goal_delete")}</button>
+            </div>
+        </div>
+    `).join("");
+}
+
+// ══════════════════════════════════════════════════════════════
+// CALENDAR
+// ══════════════════════════════════════════════════════════════
+function getSessions(){ return JSON.parse(localStorage.getItem("irem_sessions")||"[]"); }
+function saveSessions(s){ localStorage.setItem("irem_sessions", JSON.stringify(s)); }
+
+function addSession(){
+    const subject = document.getElementById("session-subject").value;
+    const duration = parseInt(document.getElementById("session-duration").value||"0");
+    const date = document.getElementById("session-date").value;
+    const start = document.getElementById("session-start").value;
+    const end = document.getElementById("session-end").value;
+    if(!duration||!date) return;
+    const s = getSessions();
+    s.push({ id:Date.now(), subject, duration, date, start, end });
+    saveSessions(s);
+    document.getElementById("session-duration").value = "";
+    document.getElementById("session-start").value = "";
+    document.getElementById("session-end").value = "";
+    renderCalendar();
+    renderAnalytics();
+}
+
+function renderCalendar(){
+    const grid = document.getElementById("week-grid");
+    const sessions = getSessions();
+    const today = new Date();
+    const dow = today.getDay(); // 0=Sun
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - (dow===0?6:dow-1));
+
+    const dayNames = currentLang==="tr"
+        ? ["Pzt","Sal","Çrş","Prş","Cum","Cmt","Paz"]
+        : ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
+    const chipColors = {Matematik:"#7C3AED",Fen:"#10B981","Türkçe":"#F97316","İngilizce":"#06B6D4","Diğer":"#8B5CF6"};
+
+    let html = "";
+    for(let i=0;i<7;i++){
+        const d = new Date(monday);
+        d.setDate(monday.getDate()+i);
+        const ds = d.toISOString().split("T")[0];
+        const isToday = ds === today.toISOString().split("T")[0];
+        const daySessions = sessions.filter(s=>s.date===ds);
+        const chips = daySessions.map(s=>{
+            const timeInfo = s.start ? `<br><small>${s.start}${s.end ? '-' + s.end : ''}</small>` : '';
+            return `<div class="session-chip" style="background:${chipColors[s.subject]||"#7C3AED"}22;color:${chipColors[s.subject]||"#C4B5FD"};border-color:${chipColors[s.subject]||"#7C3AED"}44;height:auto;padding:5px;">${s.subject} ${s.duration}dk${timeInfo}</div>`;
+        }).join("");
+        html+=`<div class="day-col"><div class="day-header">${dayNames[i]}</div><div class="day-num${isToday?" today":""}">${d.getDate()}</div>${chips}</div>`;
+    }
+    grid.innerHTML = html;
+    document.getElementById("week-label").textContent = t("week_label");
+}
+
+// ══════════════════════════════════════════════════════════════
+// ANALYTICS
+// ══════════════════════════════════════════════════════════════
+function renderAnalytics(){
+    const sessions = getSessions();
+    const goals = getGoals();
+    const today = new Date();
+
+    // Hours this week
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate()-(today.getDay()===0?6:today.getDay()-1));
+    weekStart.setHours(0,0,0,0);
+    const weekMins = sessions.filter(s=>new Date(s.date)>=weekStart).reduce((a,s)=>a+s.duration,0);
+    document.getElementById("stat-hours").textContent = (weekMins/60).toFixed(1);
+    document.getElementById("stat-goals").textContent = goals.length;
+
+    // Streak
+    let streak = 0;
+    const d = new Date(today);
+    while(true){
+        const ds = d.toISOString().split("T")[0];
+        if(sessions.some(s=>s.date===ds)){ streak++; d.setDate(d.getDate()-1); }
+        else break;
+    }
+    document.getElementById("stat-streak").textContent = streak;
+
+    // Bar chart last 7 days
+    const last7 = Array.from({length:7},(_,i)=>{
+        const dd = new Date(today);
+        dd.setDate(today.getDate()-(6-i));
+        return dd;
+    });
+    const maxMins = Math.max(1,...last7.map(dd=>{
+        const ds=dd.toISOString().split("T")[0];
+        return sessions.filter(s=>s.date===ds).reduce((a,s)=>a+s.duration,0);
+    }));
+    const dayNames = currentLang==="tr"
+        ? ["Pzt","Sal","Çrş","Prş","Cum","Cmt","Paz"]
+        : ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+    document.getElementById("activity-chart").innerHTML = last7.map((dd,i)=>{
+        const ds = dd.toISOString().split("T")[0];
+        const mins = sessions.filter(s=>s.date===ds).reduce((a,s)=>a+s.duration,0);
+        const pct = Math.round((mins/maxMins)*100)||0;
+        const name = dayNames[dd.getDay()===0?6:dd.getDay()-1];
+        return `<div class="bar-wrapper"><div class="bar" style="height:${pct}%;" title="${mins}dk"></div><div class="bar-label">${name}</div></div>`;
+    }).join("");
+}
+
+// ══════════════════════════════════════════════════════════════
+// SETTINGS
+// ══════════════════════════════════════════════════════════════
+function openSettings(){
+    document.getElementById("settings-overlay").classList.add("open");
+    document.getElementById("settings-backdrop").classList.add("open");
+    const saved = localStorage.getItem("irem_user_name")||"";
+    document.getElementById("settings-name").value = saved;
+}
+
+function closeSettings(){
+    document.getElementById("settings-overlay").classList.remove("open");
+    document.getElementById("settings-backdrop").classList.remove("open");
+}
+
+function updateName(){
+    const name = document.getElementById("settings-name").value.trim();
+    localStorage.setItem("irem_user_name", name);
+    const display = name||t("nav_dashboard").replace("Dashboard","Misafir")||"Misafir";
+    const dname = name||"Misafir";
+    document.getElementById("display-name").textContent = dname;
+    document.getElementById("user-avatar-letter").textContent = dname[0]?.toUpperCase()||"M";
+}
+
+function toggleTheme(){
+    document.body.classList.toggle("light-theme");
+    localStorage.setItem("irem_theme", document.body.classList.contains("light-theme")?"light":"dark");
+}
+
+// ══════════════════════════════════════════════════════════════
+// WEBSOCKET + CHAT
+// ══════════════════════════════════════════════════════════════
+let socket;
+const USER_ID = 101;
+
+function initWS(){
+    const proto = location.protocol==="https:"?"wss:":"ws:";
+    socket = new WebSocket(`${proto}//${location.host}/ws/chat/${USER_ID}`);
+
+    socket.onopen=()=>{ console.log("WS connected"); };
+
+    socket.onmessage=(e)=>{
+        const data = JSON.parse(e.data);
+        hideLoading();
+        appendMessage(data.message, data.agent);
+        const energy = data.energy||5;
+        document.getElementById("energy-gauge").textContent = `${energy}/10`;
+        document.getElementById("energy-bar").style.width = `${energy*10}%`;
+        const moodMap={ Positive:t("mood_positive"), Neutral:t("mood_neutral"), Tired:t("mood_tired"), Anxious:t("mood_anxious") };
+        document.getElementById("sentiment-text").textContent = `✨ ${t("mood")}: ${moodMap[data.sentiment]||data.sentiment}`;
+    };
+
+    socket.onclose=()=>{ setTimeout(initWS,3000); };
+    socket.onerror=()=>{ hideLoading(); };
+}
+
+function showLoading(){
+    const btn = document.getElementById("send-btn");
+    if(btn){ btn.textContent="⏳"; btn.disabled=true; }
+}
+
+function hideLoading(){
+    const btn = document.getElementById("send-btn");
+    if(btn){ btn.textContent="🚀"; btn.disabled=false; }
+}
+
+function sendMessage(){
+    const inp = document.getElementById("chat-input-field");
+    const msg = inp.value.trim();
+    if(!msg||!socket||socket.readyState!==WebSocket.OPEN) return;
+    const userName = localStorage.getItem("irem_user_name")||"";
+    showLoading();
+    appendMessage(msg,"USER");
+    socket.send(JSON.stringify({ message:msg, user_name:userName }));
+    inp.value="";
+}
+
+function appendMessage(text, agent){
+    const container = document.getElementById("chat-messages");
+    const div = document.createElement("div");
+    const isUser = agent==="USER";
+    div.className = `message ${isUser?"user-message":"assistant-message"}${agent==="MOTIVATION"?" motivation-msg":""}`;
+
+    if(!isUser){
+        const tag = document.createElement("span");
+        tag.className = `agent-tag tag-${agent}`;
+        tag.textContent = agent;
+        div.appendChild(tag);
+    }
+
+    // Robust Title Detection
+    const headerMatch = text.match(/^(?:#+|(\*\*))[\s]*(.*?)[\s]*\1?$/m);
+    let title = agent==="PLAN"?(currentLang==="tr"?"Ders Planı":"Study Plan"):(currentLang==="tr"?"Konu Özeti":"Topic Summary");
+    let cleanText = text;
+    
+    if(headerMatch){
+        title = headerMatch[2].replace(/\*/g, '').trim();
+        cleanText = text.replace(headerMatch[0], '').trim();
+    }
+    
+    // Explicit keywords override for better UX
+    const lowerText = text.toLowerCase();
+    if(lowerText.includes('test') || lowerText.includes('soru') || lowerText.includes('quiz') || lowerText.includes('sınav')) {
+       title = currentLang==="tr"?"Konu Testi 📝":"Topic Test 📝";
+    } else if(lowerText.includes('plan') || lowerText.includes('program')) {
+       title = currentLang==="tr"?"Çalışma Planı 📅":"Study Plan 📅";
+    }
+
+    const htmlContent = typeof marked!=="undefined" ? marked.parse(cleanText) : cleanText.replace(/\n/g,"<br>");
+
+    // PLAN / TEACH with table or long content → move to doc panel
+    if(!isUser && (agent==="PLAN"||agent==="TEACH"||cleanText.includes("| --- |"))){
+        const notice = document.createElement("i");
+        notice.textContent = currentLang==="tr"
+            ? "İçerik çalışma alanına aktarıldı 📂"
+            : "Content moved to workspace 📂";
+        div.appendChild(notice);
+        updateDocPanel(htmlContent, title);
+    } else {
+        const inner = document.createElement("div");
+        inner.innerHTML = htmlContent;
+        div.appendChild(inner);
+    }
+
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+
+function updateDocPanel(html, title){
+    document.getElementById("doc-title").textContent = title;
+    document.getElementById("doc-content").innerHTML = html;
+    document.getElementById("pdf-btn").style.display="block";
+    const panel = document.getElementById("doc-content").parentElement;
+    panel.style.boxShadow = "0 0 20px var(--primary)";
+    setTimeout(()=>panel.style.boxShadow="",1200);
+}
+
+// ══════════════════════════════════════════════════════════════
+// PDF
+// ══════════════════════════════════════════════════════════════
+async function downloadPDF() {
+  const container = document.getElementById('chat-messages');
+  const workspaceDoc = document.getElementById('doc-content');
+  const workspaceTitle = document.getElementById('doc-title').innerText;
+  
+  let content = '';
+  let title = 'IREM AI - Notlarım';
+
+  // If workspace has content and is relevant, use it
+  if (workspaceDoc.innerText.trim().length > 20 && !workspaceDoc.querySelector('.empty-state')) {
+      content = workspaceDoc.innerText;
+      title = workspaceTitle || 'IREM AI - Çalışma Notu';
+  } else {
+      // Fallback to chat messages
+      const bubbles = container.querySelectorAll('.message');
+      bubbles.forEach(b => {
+        const isUser = b.classList.contains('user-message');
+        const sender = isUser ? (localStorage.getItem('irem_user_name') || 'Ben') : 'IREM AI';
+        let text = b.innerText;
+        // Clean up agent tags
+        const tag = b.querySelector('.agent-tag');
+        if (tag) text = text.replace(tag.innerText, '').trim();
+        
+        if(text && !b.querySelector('#daily-quote-card')) {
+          content += `${sender}: ${text}\n\n`;
+        }
+      });
+      title = 'IREM AI - Sohbet Özeti';
+  }
+  
+  if (!content || content.trim().length < 5) {
+    alert(currentLang === 'tr' ? 'İndirilecek içerik bulunamadı.' : 'No content found to download.');
+    return;
+  }
+
+  const btn = document.getElementById('pdf-btn');
+  const orig = btn.innerHTML;
+  btn.innerHTML = '⏳...'; btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/generate-pdf', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({content, title})
+    });
+    if (!res.ok) throw new Error('Sunucu hatası');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'irem-ai-rapor.pdf'; 
+    document.body.appendChild(a); a.click();
+    URL.revokeObjectURL(url); a.remove();
+  } catch(e) {
+    alert('PDF hatası: ' + e.message);
+  } finally {
+    btn.innerHTML = orig; btn.disabled = false;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+document.addEventListener("DOMContentLoaded",()=>{
+    applyTranslations();
+    showPanel("dashboard");
+    showDailyQuote();
+    checkReminders();
+    setInterval(checkReminders, 60000); // Check every minute
+    initWS();
+
+    // Restore settings
+    const saved = localStorage.getItem("irem_user_name")||"";
+    if(saved){
+        document.getElementById("display-name").textContent = saved;
+        document.getElementById("user-avatar-letter").textContent = saved[0].toUpperCase();
+    }
+    if(localStorage.getItem("irem_theme")==="light") toggleTheme();
+
+    // Set today as default date in forms
+    const today = new Date().toISOString().split("T")[0];
+    document.getElementById("session-date").value = today;
+
+    // Welcome message
+    setTimeout(()=>{
+        appendMessage(t("welcome_desc"), "SYSTEM");
+    }, 600);
+
+    // Enter to send
+    document.getElementById("chat-input-field").addEventListener("keydown",(e)=>{
+        if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); sendMessage(); }
+    });
+});
+
+// ══════════════════════════════════════════════════════════════
+// DAILY QUOTES
+// ══════════════════════════════════════════════════════════════
+const DAILY_QUOTES = [
+  {t:"Bugün attığın küçük adım, yarın bakacağın büyük mesafedir.",a:"— İrem AI 💜"},
+  {t:"Zihni yorulmak bilmez. Sadece dinlenmek ister.",a:"— Marcus Aurelius"},
+  {t:"Güçlük seni kırmak için değil, şekillendirmek için gelir.",a:"— Rumi"},
+  {t:"The secret of getting ahead is getting started.",a:"— Mark Twain"},
+  {t:"An investment in knowledge pays the best interest.",a:"— Benjamin Franklin"},
+  {t:"Her uzman, bir zamanlar acemiydi. Devam et.",a:"— Helen Hayes"},
+  {t:"Kendine inanmak, başarının yarısıdır.",a:"— Theodore Roosevelt"},
+  {t:"You are braver than you believe, stronger than you seem.",a:"— A.A. Milne"},
+  {t:"Küçük ilerlemeler de ilerlemedir. Dur deme.",a:"— İrem AI 💜"},
+  {t:"It always seems impossible until it's done.",a:"— Nelson Mandela"},
+  {t:"Merak, bilgeliğin en güzel kapısıdır.",a:"— Einstein"},
+  {t:"Sabır en sessiz ama en güçlü öğretmendir.",a:"— İrem AI 💜"},
+  {t:"Don't watch the clock. Do what it does — keep going.",a:"— Sam Levenson"},
+  {t:"Başarı bir son değil, yolculuğun kendisidir.",a:"— Churchill"},
+  {t:"Bugün kendine nazik ol. Çok şey öğreniyorsun.",a:"— İrem AI 💜"},
+  {t:"The beautiful thing about learning is nobody can take it away.",a:"— B.B. King"},
+  {t:"Live as if you were to die tomorrow. Learn as if you were to live forever.",a:"— Gandhi"},
+  {t:"Sen düşündüğünden çok daha güçlüsün. Gerçekten.",a:"— İrem AI 💜"},
+  {t:"Zorlandığında durma — sadece yavaşla.",a:"— İrem AI 💜"},
+  {t:"Courage is not the absence of fear, but acting in spite of it.",a:"— Mark Twain"}
+];
+function showDailyQuote(){
+  const today = new Date().toDateString();
+  let idx = localStorage.getItem('irem_quote_idx');
+  if(localStorage.getItem('irem_quote_date') !== today || idx === null){
+    idx = Math.floor(Math.random()*DAILY_QUOTES.length);
+    localStorage.setItem('irem_quote_date', today);
+    localStorage.setItem('irem_quote_idx', idx);
+  }
+  const q = DAILY_QUOTES[idx];
+  document.getElementById('dq-text').textContent = '"' + q.t + '"';
+  document.getElementById('dq-author').textContent = q.a;
+}
+
+// ══════════════════════════════════════════════════════════════
+// REMINDERS
+// ══════════════════════════════════════════════════════════════
+function checkReminders(){
+  const today = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const currentTime = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0');
+  
+  const sessions = JSON.parse(localStorage.getItem("irem_sessions")||"[]");
+  sessions.forEach(s => {
+    if(s.date === today && s.start === currentTime){
+      showNotification(`🔔 Hatırlatıcı: ${s.subject} çalışma vaktin geldi!`, "PURPLE");
+    }
+  });
+}
+
+function showNotification(text, type){
+  const container = document.getElementById("chat-messages");
+  const div = document.createElement("div");
+  div.className = "message assistant-message motivation-msg";
+  div.style.borderLeft = "4px solid var(--primary)";
+  div.style.background = "rgba(124,58,237,0.15)";
+  div.innerHTML = `<span class="agent-tag">REMINDER</span><div>${text}</div>`;
+  
+  // Ensure it's below the daily quote but above others? No, just append to bottom.
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  
+  // Play subtle sound if possible
+  try {
+    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+    audio.play();
+  } catch(e){}
+}
+let recognition=null,isListening=false;
+function toggleVoice(){
+  const micBtn=document.getElementById('mic-btn');
+  const input=document.getElementById('chat-input-field');
+  if(!('webkitSpeechRecognition' in window||'SpeechRecognition' in window)){
+    alert('Sesli komut için Chrome kullanın!');return;
+  }
+  if(isListening){recognition.stop();return;}
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  recognition=new SR();
+  recognition.lang=(localStorage.getItem('irem_lang')||'tr')==='tr'?'tr-TR':'en-US';
+  recognition.continuous=false;recognition.interimResults=true;
+  recognition.onstart=()=>{
+    isListening=true;
+    micBtn.classList.add('listening');
+    micBtn.innerHTML='⏹️';
+  };
+  recognition.onresult=(e)=>{
+    input.value=Array.from(e.results).map(r=>r[0].transcript).join('');
+  };
+  recognition.onend=()=>{
+    isListening=false;
+    micBtn.classList.remove('listening');
+    micBtn.innerHTML='🎤';
+  };
+  recognition.onerror=(e)=>{
+    isListening=false;
+    micBtn.classList.remove('listening');
+    micBtn.innerHTML='🎤';
+  };
+  recognition.start();
+}
+</script>
+</body>
+</html>
