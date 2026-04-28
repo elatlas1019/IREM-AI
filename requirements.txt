@@ -15,3 +15,5 @@ httpx
 aiofiles
 langchain-groq
 reportlab
+
+streamlit
