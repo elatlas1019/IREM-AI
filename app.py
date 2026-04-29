@@ -313,8 +313,8 @@ if st.session_state.current_panel == "dashboard":
                 box-shadow: none !important;
             }
             
-            /* Clean up the send button */
-            div[data-testid="stElementContainer"]:has(#chat-box-anchor) + div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] button {
+            /* Send button (second column) */
+            div[data-testid="stElementContainer"]:has(#chat-box-anchor) + div[data-testid="stHorizontalBlock"] div[data-testid="column"]:nth-child(2) div[data-testid="stButton"] button {
                 background: linear-gradient(135deg, #7C3AED, #EC4899) !important;
                 border: none !important;
                 color: white !important;
@@ -329,20 +329,40 @@ if st.session_state.current_panel == "dashboard":
                 align-items: center !important;
                 justify-content: center !important;
             }
-            div[data-testid="stElementContainer"]:has(#chat-box-anchor) + div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] button:hover {
+            div[data-testid="stElementContainer"]:has(#chat-box-anchor) + div[data-testid="stHorizontalBlock"] div[data-testid="column"]:nth-child(2) div[data-testid="stButton"] button:hover {
                 box-shadow: 0 0 10px rgba(236, 72, 153, 0.6) !important;
                 color: white !important;
             }
             
-            /* User requested mic styles */
-            .mic-container audio-recorder {
+            /* Mic button (third column) */
+            div[data-testid="stElementContainer"]:has(#chat-box-anchor) + div[data-testid="stHorizontalBlock"] div[data-testid="column"]:last-child div[data-testid="stButton"] button {
+                background: #22c55e !important;
+                border: none !important;
+                color: white !important;
+                font-size: 1.5rem !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                border-radius: 50% !important;
+                width: 44px !important;
+                height: 44px !important;
+                min-height: 0 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+            }
+            
+            /* User requested mic styles for when recorder is active */
+            [data-testid="column"]:last-child .audio-recorder {
                 width: 44px !important;
                 height: 44px !important;
                 border-radius: 50% !important;
                 background: #22c55e !important;
+                padding: 0 !important;
             }
-            .audio-recorder-status { display: none !important; }
-            .audio-recorder { width: 44px !important; height: 44px !important; border-radius: 50% !important; background-color: #22c55e !important; }
+            [data-testid="column"]:last-child .audio-recorder-status,
+            [data-testid="column"]:last-child .audio-recorder p {
+                display: none !important;
+            }
             
             /* Ensure iframe matches the 44px size */
             div[data-testid="stElementContainer"]:has(#chat-box-anchor) + div[data-testid="stHorizontalBlock"] iframe {
@@ -359,22 +379,34 @@ if st.session_state.current_panel == "dashboard":
         
         if "temp_chat_val" not in st.session_state:
             st.session_state.temp_chat_val = ""
+        if "recording_active" not in st.session_state:
+            st.session_state.recording_active = False
             
         def _send_chat():
             if st.session_state.temp_chat_val.strip():
                 st.session_state.chat_submitted = st.session_state.temp_chat_val
                 st.session_state.temp_chat_val = ""
+                
+        def _start_recording():
+            st.session_state.recording_active = True
             
         c_txt, c_btn, c_mic = st.columns([0.80, 0.10, 0.10], vertical_alignment="center")
+        
+        audio_bytes = None
         
         with c_txt:
             st.text_input("hidden", placeholder="Mesajınızı yazın...", key="temp_chat_val", label_visibility="collapsed", on_change=_send_chat)
         with c_btn:
             st.button("➤", on_click=_send_chat, key="send_btn")
         with c_mic:
-            st.markdown('<div class="mic-container">', unsafe_allow_html=True)
-            audio_bytes = audio_recorder(pause_threshold=2.0, key="recorder_dash")
-            st.markdown('</div>', unsafe_allow_html=True)
+            if not st.session_state.recording_active:
+                st.button("🎤", key="mic_btn", on_click=_start_recording)
+            else:
+                with st.empty():
+                    audio_bytes = audio_recorder(pause_threshold=2.0, key="hidden_recorder")
+                    if audio_bytes:
+                        st.session_state.recording_active = False
+
             
         prompt = st.session_state.get("chat_submitted", "")
         if prompt:
