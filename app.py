@@ -220,7 +220,7 @@ with st.sidebar:
     st.markdown("""
         <div style="text-align:center; padding: 10px 0 10px 0;">
             <div style="font-size: 2.2rem; font-weight: 800; background: linear-gradient(90deg, #C084FC, #EC4899, #3B82F6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 1px;">
-                ✨ IREM AI
+                <span style="font-size:32px; background: linear-gradient(135deg, #a855f7, #ec4899); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">✦</span> IREM AI
             </div>
             <div style="font-size: 0.85rem; color: #94A3B8; font-style: italic; margin-top: 5px;">
                 Kişisel Öğrenme Koçun 🚀
@@ -392,7 +392,7 @@ elif st.session_state.current_panel == "goals":
             g_desc = st.text_area("Açıklama")
             g_start = st.date_input("Başlangıç Tarihi", now_istanbul())
             g_end = st.date_input("Bitiş Tarihi", now_istanbul())
-            if st.form_submit_button("Hedef Ekle"):
+            if st.form_submit_button("✅ Hedef Ekle"):
                 new_goal = {"title": g_title, "desc": g_desc, "start": str(g_start), "end": str(g_end), "status": "Devam Ediyor"}
                 st.session_state.goals_list.append(new_goal)
                 conn = sqlite3.connect('goals.db')
@@ -401,6 +401,25 @@ elif st.session_state.current_panel == "goals":
                 c.execute("INSERT INTO goals_v2 VALUES (?, ?, ?, ?, ?)", (g_title, g_desc, str(g_start), str(g_end), "Devam Ediyor"))
                 conn.commit(); conn.close()
                 st.success("Hedef başarıyla eklendi!")
+
+        if st.session_state.goals_list:
+            with st.form("goal_delete_form"):
+                st.markdown("#### 🗑️ Hedef Sil")
+                goal_names = [g['title'] for g in st.session_state.goals_list]
+                goal_to_del = st.selectbox("Silinecek Hedef", goal_names)
+                if st.form_submit_button("❌ Hedef Sil"):
+                    idx = goal_names.index(goal_to_del)
+                    deleted = st.session_state.goals_list.pop(idx)
+                    try:
+                        conn = sqlite3.connect('goals.db')
+                        c = conn.cursor()
+                        c.execute("DELETE FROM goals_v2 WHERE title=?", (deleted['title'],))
+                        conn.commit()
+                        conn.close()
+                    except Exception:
+                        pass
+                    st.success(f"{deleted['title']} silindi!")
+                    st.rerun()
 
     with col_v:
         st.markdown("### 📅 İlerleme Durumu")
@@ -471,7 +490,7 @@ elif st.session_state.current_panel == "calendar":
             c_day = st.date_input("Gün", now)
             c_start_t = st.time_input("Başlangıç Saati", value=st.session_state.cal_start_time, step=60)
             c_end_t = st.time_input("Bitiş Saati", value=st.session_state.cal_end_time, step=60)
-            if st.form_submit_button("Takvime Ekle"):
+            if st.form_submit_button("✅ Takvime Ekle"):
                 # Persist chosen times to session_state so they don't reset
                 st.session_state.cal_start_time = c_start_t
                 st.session_state.cal_end_time = c_end_t
@@ -485,6 +504,17 @@ elif st.session_state.current_panel == "calendar":
                 }
                 st.session_state.schedule_list.append(new_session)
                 st.success(f"{c_task} kaydedildi!")
+
+        if st.session_state.schedule_list:
+            with st.form("cal_delete_form"):
+                st.markdown("#### 🗑️ Görev Sil")
+                task_names = [f"{s['task']} ({s['day']} {s['start_time'][:5]})" for s in st.session_state.schedule_list]
+                task_to_del = st.selectbox("Silinecek Görev", task_names)
+                if st.form_submit_button("❌ Takvimden Sil"):
+                    idx = task_names.index(task_to_del)
+                    deleted = st.session_state.schedule_list.pop(idx)
+                    st.success(f"{deleted['task']} silindi!")
+                    st.rerun()
 
     with col_v:
         st.markdown("### 🗓️ Haftalık Görünüm")
