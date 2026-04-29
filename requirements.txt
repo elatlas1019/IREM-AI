@@ -1,6 +1,8 @@
 streamlit
 langchain
 langchain-core
+langchain-groq
+langchain-community
 fpdf2
 audio-recorder-streamlit
 pandas
@@ -11,11 +13,10 @@ uvicorn[standard]
 pydantic
 pydantic-settings
 langgraph
-langchain-google-genai
-google-generativeai
 websockets
 python-multipart
 httpx
 aiofiles
 plotly
 pytz
+groq

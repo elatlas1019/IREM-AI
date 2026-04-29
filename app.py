@@ -3,7 +3,7 @@ import os
 import asyncio
 import sqlite3
 import random
-import base64
+import tempfile
 import pandas as pd
 import pytz
 from datetime import datetime
@@ -19,22 +19,27 @@ istanbul = pytz.timezone("Europe/Istanbul")
 def now_istanbul():
     return datetime.now(istanbul)
 
-# ─── STT via Gemini Multimodal ─────────────────────────────────────────────────
-def transcribe_audio_with_gemini(audio_bytes: bytes) -> str:
-    """Send audio bytes to Gemini API for speech-to-text transcription."""
+# ─── STT via Groq Whisper ──────────────────────────────────────────────────────
+def transcribe_audio_with_groq(audio_bytes: bytes) -> str:
+    """Send audio bytes to Groq Whisper API for speech-to-text transcription."""
     try:
-        import google.generativeai as genai
-        gemini_key = st.secrets.get("GEMINI_API_KEY") or st.secrets.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
-        if not gemini_key:
+        import tempfile
+        from groq import Groq
+        groq_key = st.secrets.get("GROQ_API_KEY") or os.environ.get("GROQ_API_KEY")
+        if not groq_key:
             return ""
-        genai.configure(api_key=gemini_key)
-        model = genai.GenerativeModel("gemini-2.0-flash")
-        audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
-        response = model.generate_content([
-            "Lütfen bu ses kaydındaki konuşmayı metne çevir. Sadece söylenen kelimeler, başka hiçbir şey ekleme.",
-            {"inline_data": {"mime_type": "audio/wav", "data": audio_b64}}
-        ])
-        return response.text.strip()
+        client = Groq(api_key=groq_key)
+        # Write audio bytes to a temp file (Groq requires a file-like object)
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+            tmp.write(audio_bytes)
+            tmp_path = tmp.name
+        with open(tmp_path, "rb") as audio_file:
+            transcription = client.audio.transcriptions.create(
+                model="whisper-large-v3",
+                file=audio_file,
+                language="tr"
+            )
+        return transcription.text.strip()
     except Exception as e:
         st.warning(f"Ses tanıma hatası: {e}")
         return ""
@@ -210,7 +215,7 @@ if st.session_state.current_panel == "dashboard":
         if audio_bytes and len(audio_bytes) > 1000 and not st.session_state.audio_processed:
             st.session_state.audio_processed = True
             with st.spinner("🎙️ Sesiniz metne çevriliyor..."):
-                transcribed = transcribe_audio_with_gemini(audio_bytes)
+                transcribed = transcribe_audio_with_groq(audio_bytes)
             if transcribed:
                 st.success(f"Anlaşılan: _{transcribed}_")
                 prompt = transcribed

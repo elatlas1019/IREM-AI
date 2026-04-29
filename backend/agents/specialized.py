@@ -1,8 +1,7 @@
 import os
 import random
-import re
 import streamlit as st
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
 from langchain_core.messages import AIMessage, SystemMessage
 from .state import AgentState
 
@@ -22,7 +21,7 @@ QUOTES = {
         {"text": "Gelecek, bugün hazırlananlarındır.", "author": "Malcolm X", "emoji": "🚀"},
         {"text": "En büyük zaferimiz hiç düşmemek değil, her düştüğümüzde kalkmaktır.", "author": "Konfüçyüs", "emoji": "💪"},
         {"text": "Zorluklar, başarının değerini artıran süslerdir.", "author": "Moliere", "emoji": "💎"},
-        {"text": "Eğer fırtına çıkarsa, gemini limana yanaştırma; açık denizlere açıl.", "author": "Aristoteles", "emoji": "🌊"},
+        {"text": "Eğer fırtına çıkarsa, limana yanaşma; açık denizlere açıl.", "author": "Aristoteles", "emoji": "🌊"},
         {"text": "Hayat, bisiklete binmek gibidir. Dengede kalmak için hareket etmelisin.", "author": "Albert Einstein", "emoji": "🚲"},
         {"text": "Sadece güneşli günlerde yürürseniz, hedefinize asla varamazsınız.", "author": "Paulo Coelho", "emoji": "☀️"},
         {"text": "Yapabileceğinize inanın, yolun yarısını çoktan geçtiniz demektir.", "author": "Theodore Roosevelt", "emoji": "🎯"},
@@ -47,13 +46,11 @@ QUOTES = {
     ]
 }
 
-# ─── LLM Getter (GEMINI ONLY) ──────────────────────────────────────────────────
+# ─── LLM Getter (GROQ) ─────────────────────────────────────────────────────────
 def get_llm(agent_type="PLAN"):
-    # Access API keys from environment or Streamlit secrets
-    gemini_key = st.secrets.get("GEMINI_API_KEY") or os.environ.get("GEMINI_API_KEY") or st.secrets.get("GOOGLE_API_KEY") or os.environ.get("GOOGLE_API_KEY")
-
-    if gemini_key:
-        return ChatGoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=gemini_key)
+    groq_key = st.secrets.get("GROQ_API_KEY") or os.environ.get("GROQ_API_KEY")
+    if groq_key:
+        return ChatGroq(model="llama3-8b-8192", groq_api_key=groq_key, temperature=0.7)
     else:
         return MockLLM()
 
@@ -63,12 +60,12 @@ def generic_node(state: AgentState, agent_type: str, system_prompts: dict):
     lang = state.get("language", "tr")
     llm = get_llm(agent_type)
     if isinstance(llm, MockLLM):
-        return {"messages": [AIMessage(content=f"⚠️ Hata: API anahtarı bulunamadı. Lütfen Streamlit ayarlarından GEMINI_API_KEY ekleyin.")]}
+        return {"messages": [AIMessage(content="⚠️ Hata: API anahtarı bulunamadı. Lütfen Streamlit ayarlarından GROQ_API_KEY ekleyin.")]}
 
     system_msg = system_prompts.get(lang, system_prompts.get("en", ""))
     user_name = state.get("user_name", "") or "Öğrenci"
     system_msg = system_msg.replace("[name]", user_name)
-    
+
     lang_instruction = (
         "MUTLAKA Türkçe yanıt ver. İngilizce kullanma." if lang == "tr"
         else "ALWAYS reply in English. Do not use Turkish."
@@ -76,12 +73,12 @@ def generic_node(state: AgentState, agent_type: str, system_prompts: dict):
     system_msg = f"{lang_instruction}\n\n{system_msg}"
 
     messages = [SystemMessage(content=system_msg)] + state["messages"]
-    
+
     try:
         response = llm.invoke(messages)
     except Exception as e:
         return {"messages": [AIMessage(content=f"🤖 Model Hatası: {e}")]}
-        
+
     return {"messages": [response]}
 
 

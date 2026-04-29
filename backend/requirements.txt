@@ -4,8 +4,7 @@ sqlalchemy
 pydantic
 pydantic-settings
 langgraph
-langchain-google-genai
-google-generativeai
+langchain-groq
 python-dotenv
 websockets
 alembic
@@ -13,5 +12,5 @@ langchain-core
 python-multipart
 httpx
 aiofiles
-langchain-groq
 reportlab
+groq
