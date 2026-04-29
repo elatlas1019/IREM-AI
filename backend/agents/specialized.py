@@ -39,34 +39,22 @@ QUOTES = {
     ]
 }
 
-
-# ─── MockLLM (Enhanced for testing without API keys) ───────────────────────────
-class MockLLM:
-    def __init__(self, agent_type="PLAN"):
-        self.agent_type = agent_type
-
-    def invoke(self, messages):
-        user_msg = messages[-1].content if messages else ""
-        
-        # Enhanced Mock Responses to avoid "empty" replies
-        if self.agent_type == "TEACH":
-            return AIMessage(content="# Matematik Testi (Örnek)\n\n1. 5 x 8 işleminin sonucu nedir?\nA) 35  B) 40  C) 45  D) 50\n\n2. 12 x 4 işleminin sonucu nedir?\nA) 44  B) 46  C) 48  D) 50\n\nBu bir demo yanıtıdır. Lütfen tam içerik için API anahtarınızı ekleyin.")
-        elif self.agent_type == "PLAN":
-            return AIMessage(content="# Çalışma Planı\n\n| Gün | Saat | Konu | Aktivite |\n|---|---|---|---|\n| Pazartesi | 18:00 | Matematik | Soru Çözümü |\n| Salı | 19:00 | Fen | Konu Tekrarı |")
-        
-        return AIMessage(content="Sana yardımcı olmak için buradayım! Lütfen API anahtarınızı (ANTHROPIC_API_KEY) kontrol edin.")
-
-
-# ─── LLM Getter ────────────────────────────────────────────────────────────────
+# ─── LLM Getter (No MockLLM anymore) ───────────────────────────────────────────
 def get_llm(agent_type="PLAN"):
-    if os.getenv("ANTHROPIC_API_KEY"):
-        return ChatAnthropic(model="claude-sonnet-4-20250514")
-    elif os.getenv("GROQ_API_KEY"):
-        return ChatGroq(model="llama-3.3-70b-versatile")
-    elif os.getenv("GOOGLE_API_KEY"):
-        return ChatGoogleGenerativeAI(model="gemini-1.5-flash")
+    # Priority: Anthropic -> Groq -> Google
+    # We use os.environ.get as requested by user
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+    groq_key = os.environ.get("GROQ_API_KEY")
+    google_key = os.environ.get("GOOGLE_API_KEY")
+
+    if anthropic_key:
+        return ChatAnthropic(model="claude-3-5-sonnet-20240620", anthropic_api_key=anthropic_key)
+    elif groq_key:
+        return ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=groq_key)
+    elif google_key:
+        return ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=google_key)
     else:
-        return MockLLM(agent_type)
+        raise ValueError("CRITICAL ERROR: No API key found in environment variables. Please check Streamlit Secrets.")
 
 
 # ─── Generic Node ──────────────────────────────────────────────────────────────
@@ -86,13 +74,8 @@ def generic_node(state: AgentState, agent_type: str, system_prompts: dict):
 
     messages = [SystemMessage(content=system_msg)] + state["messages"]
 
-    try:
-        response = llm.invoke(messages)
-    except Exception as e:
-        print(f"LLM Error in {agent_type}: {e}")
-        fallback_llm = MockLLM(agent_type)
-        response = fallback_llm.invoke(messages)
-
+    # We call the real LLM directly. Any error will bubble up to indicate API issue.
+    response = llm.invoke(messages)
     return {"messages": [response]}
 
 
@@ -174,21 +157,14 @@ def motivation_node(state: AgentState):
     quote = random.choice(quote_list)
 
     llm = get_llm("MOTIVATION")
-    if not isinstance(llm, MockLLM):
-        try:
-            lang_instruction = "MUTLAKA Türkçe yanıt ver." if lang == "tr" else "ALWAYS reply in English."
-            system_prompt = (
-                f"{lang_instruction}\n"
-                f"You are a warm AI coach. User: {user_name}, State: {sentiment}.\n"
-                f"Quote: '{quote['text']}' by {quote['author']}.\n"
-                f"Be very supportive and personal. 3-4 sentences max."
-            )
-            messages = [SystemMessage(content=system_prompt)] + state["messages"]
-            response = llm.invoke(messages)
-            return {"messages": [response]}
-        except:
-            pass
-
-    # Fallback
-    text = f"Selam {user_name}! {quote['author']} der ki: \"{quote['text']}\" {quote['emoji']} Yanındayım!"
-    return {"messages": [AIMessage(content=text)]}
+    
+    lang_instruction = "MUTLAKA Türkçe yanıt ver." if lang == "tr" else "ALWAYS reply in English."
+    system_prompt = (
+        f"{lang_instruction}\n"
+        f"You are a warm AI coach. User: {user_name}, State: {sentiment}.\n"
+        f"Quote: '{quote['text']}' by {quote['author']}.\n"
+        f"Be very supportive and personal. 3-4 sentences max."
+    )
+    messages = [SystemMessage(content=system_prompt)] + state["messages"]
+    response = llm.invoke(messages)
+    return {"messages": [response]}
