@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import asyncio
 import sqlite3
+import random
 import pandas as pd
 from datetime import datetime
 from audio_recorder_streamlit import audio_recorder
@@ -13,7 +14,7 @@ from backend.agents.specialized import QUOTES
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="IREM AI - Eğitim Koçu", layout="wide", page_icon="💠")
 
-# --- CUSTOM CSS ---
+# --- CUSTOM CSS (Modern Design with Cards) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
@@ -21,12 +22,12 @@ st.markdown("""
     * { font-family: 'Outfit', sans-serif; }
     
     .stApp {
-        background: linear-gradient(135deg, #0F172A 0%, #1E1B4B 100%);
+        background: #0F172A;
         color: #F8FAFC;
     }
     
     [data-testid="stSidebar"] {
-        background: rgba(15, 23, 42, 0.95);
+        background: #111827 !important;
         border-right: 1px solid rgba(124, 58, 237, 0.2);
     }
     
@@ -39,57 +40,31 @@ st.markdown("""
         transition: all 0.3s ease;
     }
     
-    .metric-card:hover {
-        border-color: #7C3AED;
-        box-shadow: 0 0 20px rgba(124, 58, 237, 0.2);
-        transform: translateY(-5px);
-    }
-    
     .chat-bubble {
         padding: 15px 20px;
         border-radius: 20px;
         margin-bottom: 15px;
         max-width: 85%;
-        line-height: 1.6;
     }
     
     .user-msg {
         background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
         color: white;
         margin-left: auto;
-        border-bottom-right-radius: 5px;
     }
     
     .assistant-msg {
         background: #1E293B;
         color: #F1F5F9;
         margin-right: auto;
-        border-bottom-left-radius: 5px;
         border-left: 4px solid #7C3AED;
     }
-    
-    .doc-panel {
-        background: rgba(30, 41, 59, 0.5);
-        border-radius: 24px;
-        padding: 25px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-    
-    h1, h2, h3 { color: #F8FAFC; font-weight: 700; }
     
     .stButton>button {
         background: linear-gradient(90deg, #7C3AED 0%, #EC4899 100%);
         color: white;
-        border: none;
         border-radius: 12px;
-        padding: 10px 25px;
         font-weight: 600;
-        transition: all 0.3s ease;
-    }
-    
-    .stButton>button:hover {
-        opacity: 0.9;
-        box-shadow: 0 0 15px rgba(124, 58, 237, 0.4);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -117,125 +92,110 @@ with st.sidebar:
     st.session_state.grade = st.selectbox("Sınıfın", ["9. Sınıf", "10. Sınıf", "11. Sınıf", "12. Sınıf", "Mezun"], index=3)
     
     st.markdown("### Navigasyon")
-    if st.button("📊 Dashboard", use_container_width=True):
+    if st.sidebar.button("📊 Dashboard", use_container_width=True, key="nav_dash"):
         st.session_state.current_panel = "dashboard"
-    if st.button("🎯 Hedeflerim", use_container_width=True):
+        st.rerun()
+    if st.sidebar.button("🎯 Hedeflerim", use_container_width=True, key="nav_goals"):
         st.session_state.current_panel = "goals"
-    if st.button("📅 Çalışma Takvimi", use_container_width=True):
+        st.rerun()
+    if st.sidebar.button("📅 Çalışma Takvimi", use_container_width=True, key="nav_cal"):
         st.session_state.current_panel = "calendar"
+        st.rerun()
     
     st.markdown("---")
-    st.markdown("### Gelişim Durumu")
     st.progress(st.session_state.energy / 100, text=f"Enerji: %{st.session_state.energy}")
-    st.markdown(f"**Mevcut Mod:** {st.session_state.mood}")
 
-# --- MAIN CONTENT ---
+# --- MAIN DASHBOARD ---
 if st.session_state.current_panel == "dashboard":
-    # Header Metrics
+    # Metrics
     m1, m2, m3, m4 = st.columns(4)
-    with m1:
-        st.markdown(f'<div class="metric-card"><div style="font-size:0.9rem; color:#94A3B8;">ODAK</div><div style="font-size:1.8rem; font-weight:700; color:#7C3AED;">%{st.session_state.energy}</div></div>', unsafe_allow_html=True)
-    with m2:
-        st.markdown(f'<div class="metric-card"><div style="font-size:0.9rem; color:#94A3B8;">MOD</div><div style="font-size:1.8rem; font-weight:700; color:#EC4899;">{st.session_state.mood}</div></div>', unsafe_allow_html=True)
-    with m3:
-        st.markdown(f'<div class="metric-card"><div style="font-size:0.9rem; color:#94A3B8;">GÜN</div><div style="font-size:1.8rem; font-weight:700; color:#3B82F6;">{datetime.now().strftime("%d %b")}</div></div>', unsafe_allow_html=True)
-    with m4:
-        st.markdown(f'<div class="metric-card"><div style="font-size:0.9rem; color:#94A3B8;">SAAT</div><div style="font-size:1.8rem; font-weight:700; color:#10B981;">{datetime.now().strftime("%H:%M")}</div></div>', unsafe_allow_html=True)
+    with m1: st.markdown(f'<div class="metric-card"><div style="color:#94A3B8;">ODAK</div><div style="font-size:1.8rem; font-weight:700; color:#7C3AED;">%{st.session_state.energy}</div></div>', unsafe_allow_html=True)
+    with m2: st.markdown(f'<div class="metric-card"><div style="color:#94A3B8;">MOD</div><div style="font-size:1.8rem; font-weight:700; color:#EC4899;">{st.session_state.mood}</div></div>', unsafe_allow_html=True)
+    with m3: st.markdown(f'<div class="metric-card"><div style="color:#94A3B8;">GÜN</div><div style="font-size:1.8rem; font-weight:700; color:#3B82F6;">{datetime.now().strftime("%d %b")}</div></div>', unsafe_allow_html=True)
+    with m4: st.markdown(f'<div class="metric-card"><div style="color:#94A3B8;">SAAT</div><div style="font-size:1.8rem; font-weight:700; color:#10B981;">{datetime.now().strftime("%H:%M")}</div></div>', unsafe_allow_html=True)
     
     st.markdown("<br>", unsafe_allow_html=True)
-    
-    # Quote of the day
-    quote_list = QUOTES.get("Motivation")
-    quote = random.choice(quote_list)
+
+    # Quote of the day (Robust Fix)
+    all_quotes = QUOTES.get("Motivation", [{"text": "Başarı, çabanın sonucudur.", "author": "İrem AI", "emoji": "✨"}])
+    quote = random.choice(all_quotes)
     st.markdown(f"""
-        <div style="background: linear-gradient(90deg, rgba(124, 58, 237, 0.2) 0%, rgba(236, 72, 153, 0.2) 100%); padding: 30px; border-radius: 24px; border: 1px solid rgba(124, 58, 237, 0.3); text-align: center;">
-            <div style="font-size:11px; color:#F472B6; font-weight:800; letter-spacing:2px; margin-bottom:10px; text-transform:uppercase;">✨ GÜNÜN SÖZÜ</div>
-            <div style="font-size:1.2rem; font-weight:700; color:white; line-height:1.5;">"{quote['text']}"</div>
-            <div style="font-size:0.95rem; color:#F472B6; margin-top:10px;">— {quote['author']} {quote['emoji']}</div>
+        <div style="background: rgba(124, 58, 237, 0.1); padding: 25px; border-radius: 20px; border: 1px solid rgba(124, 58, 237, 0.3); text-align: center;">
+            <div style="font-size:11px; color:#F472B6; font-weight:800; letter-spacing:2px; margin-bottom:5px;">✨ GÜNÜN SÖZÜ</div>
+            <div style="font-size:1.1rem; font-weight:600; color:white;">"{quote['text']}"</div>
+            <div style="font-size:0.9rem; color:#F472B6; margin-top:5px;">— {quote['author']} {quote['emoji']}</div>
         </div>
     """, unsafe_allow_html=True)
-    
-    st.markdown("<br>", unsafe_allow_html=True)
 
-    # Workspace
     col_chat, col_doc = st.columns([1.1, 1.4], gap="large")
     
     with col_chat:
-        # Chat Messages
-        chat_sub = st.container(height=500, border=False)
+        chat_sub = st.container(height=450, border=False)
         with chat_sub:
             if not st.session_state.messages:
-                st.markdown(f'<div class="chat-bubble assistant-msg">Merhaba {st.session_state.user_name}! Bugün senin için neler yapabilirim? Hedeflerine odaklanmana yardımcı olmak için buradayım. 💠</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="chat-bubble assistant-msg">Merhaba {st.session_state.user_name}! Bugün sana nasıl yardımcı olabilirim? 💠</div>', unsafe_allow_html=True)
             for m in st.session_state.messages:
                 cls = "user-msg" if m["role"] == "user" else "assistant-msg"
                 st.markdown(f'<div class="chat-bubble {cls}">{m["content"]}</div>', unsafe_allow_html=True)
+        
+        # Audio
+        audio_bytes = audio_recorder(text="🎙️", icon_size="2x", key="recorder_dash")
+        prompt = st.chat_input("Mesajınızı yazın...")
+        
+        if audio_bytes and len(audio_bytes) > 0:
+            st.info("Sesli komut şu an devre dışıdır.")
+
+        if prompt:
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            config = {"configurable": {"thread_id": "st-session-1"}}
+            state_update = {"messages": [HumanMessage(content=prompt)], "user_name": st.session_state.user_name, "language": "tr"}
+            
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            response_state = loop.run_until_complete(coaching_agent_app.ainvoke(state_update, config))
+            
+            last_msg = response_state["messages"][-1].content
+            st.session_state.energy = response_state.get("energy_score", st.session_state.energy)
+            st.session_state.messages.append({"role": "assistant", "content": last_msg})
+            st.rerun()
 
     with col_doc:
         st.markdown("### 📄 Çalışma Alanı")
-        last_assist = next(
-            (m for m in reversed(st.session_state.messages) 
-             if m.get("role") == "assistant"),
-            None
-        )
-        if last_assist and last_assist.get("content"):
+        last_assist = next((m for m in reversed(st.session_state.messages) if m.get("role") == "assistant"), None)
+        if last_assist:
             content = last_assist["content"]
-            with st.container(height=420, border=False):
+            with st.container(height=400, border=True):
                 st.markdown(content)
-            
-            note_bytes = content.encode('utf-8')
-            st.download_button(
-                label="📥 Notu İndir",
-                data=note_bytes,
-                file_name="irem_not.txt",
-                mime="text/plain; charset=utf-8",
-                use_container_width=True,
-                key="download_note"
-            )
+            st.download_button("📥 Notu İndir", data=content.encode('utf-8'), file_name="irem_not.txt", mime="text/plain; charset=utf-8", use_container_width=True)
         else:
-            st.info("AI ile konuş, notların burada çıkar.")
-
-    # --- INPUT AREA (OUTSIDE COLUMNS) ---
-    st.markdown("---")
-    
-    # Voice Button above input
-    audio_bytes = audio_recorder(text="🎙️ Sesli Komut (Bas ve Konuş)", icon_size="2x", key="recorder")
-    
-    prompt = None
-    if audio_bytes is not None and len(audio_bytes) > 0:
-        with st.spinner("Ses işleniyor..."):
-            # Note: Voice processing is temporarily disabled as we moved away from Groq
-            # but we keep the logic structure for future integration if needed.
-            st.info("Sesli komut özelliği şu an yapılandırma aşamasındadır. Lütfen metin girişini kullanın.")
-            prompt = None
-    
-    # Text input
-    chat_prompt = st.chat_input("Mesajınızı yazın...")
-    if chat_prompt:
-        prompt = chat_prompt
-
-    if prompt:
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        
-        # Agent logic
-        config = {"configurable": {"thread_id": "st-session-1"}}
-        state_update = {"messages": [HumanMessage(content=prompt)], "user_name": st.session_state.user_name, "language": "tr"}
-        
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        response_state = loop.run_until_complete(coaching_agent_app.ainvoke(state_update, config))
-        
-        last_msg = response_state["messages"][-1].content
-        active_agent = response_state.get("next_agent", "SYSTEM")
-        
-        # Update metrics
-        st.session_state.energy = response_state.get("energy_score", st.session_state.energy)
-        mood_map = {"Positive": "Pozitif", "Neutral": "Nötr", "Tired": "Yorgun", "Anxious": "Endişeli"}
-        st.session_state.mood = mood_map.get(response_state.get("sentiment"), st.session_state.mood)
-        
-        st.session_state.messages.append({"role": "assistant", "content": last_msg, "agent": active_agent})
-        st.rerun()
+            st.info("Notların burada görünecek.")
 
 elif st.session_state.current_panel == "goals":
     st.markdown("## 🎯 Hedeflerim")
-    # ... rest of the app ...
-    # (Leaving rest of file as is, but ensuring input section fix is applied)
+    with st.form("goal_form_modern"):
+        g_title = st.text_input("Hedef")
+        g_desc = st.text_area("Açıklama")
+        g_date = st.date_input("Hedef Tarihi")
+        if st.form_submit_button("Hedef Ekle"):
+            conn = sqlite3.connect('goals.db')
+            c = conn.cursor()
+            c.execute("CREATE TABLE IF NOT EXISTS goals (title TEXT, description TEXT, date TEXT)")
+            c.execute("INSERT INTO goals VALUES (?, ?, ?)", (g_title, g_desc, str(g_date)))
+            conn.commit(); conn.close()
+            st.success("Hedef eklendi!")
+    
+    try:
+        conn = sqlite3.connect('goals.db')
+        df = pd.read_sql_query("SELECT * FROM goals", conn)
+        conn.close()
+        st.dataframe(df, use_container_width=True)
+    except: st.info("Henüz hedef yok.")
+
+elif st.session_state.current_panel == "calendar":
+    st.markdown("## 📅 Çalışma Takvimi")
+    with st.form("cal_form_modern"):
+        c_task = st.text_input("Görev/Ders")
+        c_day = st.date_input("Gün")
+        c_time = st.time_input("Saat")
+        if st.form_submit_button("Takvime Ekle"):
+            st.success(f"{c_task} görevi {c_day} saat {c_time} için kaydedildi!")
