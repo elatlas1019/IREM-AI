@@ -175,18 +175,17 @@ with st.sidebar:
 if st.session_state.current_panel == "dashboard":
     now = now_istanbul()
 
-    # ─── Dashboard reminder check ────────────────────────────────────────────────
+    # ─── Dashboard reminder check (1-minute precision) ────────────────────────────────
     now_ts = now_istanbul()
     for _s in st.session_state.schedule_list:
         try:
             _sd = datetime.strptime(_s["day"], "%Y-%m-%d").date()
             if _sd == now_ts.date():
-                _st = datetime.strptime(_s["start_time"], "%H:%M:%S").time()
-                _diff = (datetime.combine(_sd, _st) - now_ts.replace(tzinfo=None)).total_seconds()
-                if 0 <= _diff <= 1800:
-                    st.toast(f"🔔 Yaklaşan Oturum: {_s['task']} — {_s['start_time']}", icon="📅")
-                elif -60 <= _diff < 0:
-                    st.warning(f"⏰ **{_s['task']}** çalışma oturumun şu an başlamalı!")
+                _st_time = datetime.strptime(_s["start_time"], "%H:%M:%S").time()
+                _diff = (datetime.combine(_sd, _st_time) - now_ts.replace(tzinfo=None)).total_seconds()
+                if abs(_diff) <= 60:  # Within 1 minute of start time
+                    st.toast(f"⏰ Çalışma zamanı! Görev: {_s['task']}", icon="⏰")
+                    st.warning(f"⏰ Çalışma zamanı! **Görev: {_s['task']}** — {_s['start_time']}")
         except Exception:
             pass
 
@@ -334,15 +333,16 @@ elif st.session_state.current_panel == "calendar":
     st.markdown("## 📅 Çalışma Takvimi")
     now = now_istanbul()
     
-    # Reminder logic
+    # Reminder logic — 1-minute precision, toast + warning
     for session in st.session_state.schedule_list:
         try:
             s_date = datetime.strptime(session["day"], "%Y-%m-%d").date()
             if s_date == now.date():
                 s_time = datetime.strptime(session["start_time"], "%H:%M:%S").time()
-                diff = (datetime.combine(now.date(), s_time) - now.replace(tzinfo=None)).total_seconds()
-                if 0 <= diff <= 1800:
-                    st.toast(f"🔔 Yaklaşan Oturum: {session['task']} (Saat {session['start_time']})", icon="📅")
+                diff = (datetime.combine(s_date, s_time) - now.replace(tzinfo=None)).total_seconds()
+                if abs(diff) <= 60:  # Within 1 minute of start time
+                    st.toast(f"⏰ Çalışma zamanı! Görev: {session['task']}", icon="⏰")
+                    st.warning(f"⏰ Çalışma zamanı! **Görev: {session['task']}** — {session['start_time']}")
         except Exception:
             pass
 
@@ -368,14 +368,48 @@ elif st.session_state.current_panel == "calendar":
 
     with col_v:
         st.markdown("### 🗓️ Haftalık Görünüm")
-        if st.session_state.schedule_list:
-            import plotly.express as px
-            df_sched = pd.DataFrame(st.session_state.schedule_list)
-            df_sched['start'] = pd.to_datetime(df_sched['start'])
-            df_sched['end'] = pd.to_datetime(df_sched['end'])
-            fig = px.timeline(df_sched, x_start="start", x_end="end", y="task", color="task",
-                             title="Haftalık Çalışma Planı", template="plotly_dark")
-            fig.update_yaxes(autorange="reversed")
-            st.plotly_chart(fig, use_container_width=True)
-        else:
+
+        DAYS_TR = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]
+        DAY_MAP = {
+            "0": "Pazartesi", "1": "Salı", "2": "Çarşamba", "3": "Perşembe",
+            "4": "Cuma", "5": "Cumartesi", "6": "Pazar"
+        }
+        import calendar as cal_lib
+
+        # Build grid: day -> list of task strings
+        grid = {d: [] for d in DAYS_TR}
+        for item in st.session_state.schedule_list:
+            try:
+                day_obj = datetime.strptime(item["day"], "%Y-%m-%d")
+                weekday_name = DAYS_TR[day_obj.weekday()]
+                start_fmt = item["start_time"][:5]  # HH:MM
+                end_fmt = item["end_time"][:5]
+                grid[weekday_name].append(f"{item['task']} ({start_fmt}-{end_fmt})")
+            except Exception:
+                pass
+
+        # Render HTML table
+        max_rows = max((len(v) for v in grid.values()), default=0)
+        if max_rows == 0:
             st.info("Henüz bir çalışma oturumu eklemediniz.")
+        else:
+            header = "".join(f"<th style='padding:8px 12px; background:#1E293B; color:#A78BFA; border:1px solid #334155; min-width:100px;'>{d}</th>" for d in DAYS_TR)
+            rows = ""
+            for i in range(max_rows):
+                cells = ""
+                for d in DAYS_TR:
+                    cell_val = grid[d][i] if i < len(grid[d]) else ""
+                    bg = "#0F2238" if cell_val else "#0F172A"
+                    cells += f"<td style='padding:8px 12px; background:{bg}; color:#E2E8F0; border:1px solid #1E293B; font-size:0.82rem;'>{cell_val}</td>"
+                rows += f"<tr>{cells}</tr>"
+
+            table_html = f"""
+            <div style='overflow-x:auto; margin-top:8px;'>
+            <table style='border-collapse:collapse; width:100%; table-layout:fixed;'>
+              <thead><tr>{header}</tr></thead>
+              <tbody>{rows}</tbody>
+            </table>
+            </div>
+            """
+            st.markdown(table_html, unsafe_allow_html=True)
+
