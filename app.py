@@ -278,48 +278,77 @@ if st.session_state.current_panel == "dashboard":
                 cls = "user-msg" if m["role"] == "user" else "assistant-msg"
                 st.markdown(f'<div class="chat-bubble {cls}">{m["content"]}</div>', unsafe_allow_html=True)
         
-        # ─── Unified Audio & Text Input ─────────────────────────────────────────
+        # ─── Unified Audio & Text Input (Inline) ────────────────────────────────
+        st.markdown('<span id="chat-box-anchor"></span>', unsafe_allow_html=True)
         st.markdown("""
             <style>
-            /* Unified Chat Input Styling */
-            div[data-testid="stChatInput"] {
-                background-color: #1E293B !important;
-                border: 1px solid rgba(124, 58, 237, 0.4) !important;
-                border-radius: 24px !important;
-                box-shadow: 0 0 10px rgba(124, 58, 237, 0.2) !important;
-                padding-right: 50px !important; /* Make room for mic */
+            #chat-box-anchor { display: none; }
+            /* Target the immediate next horizontal block which is our columns */
+            div[data-testid="stElementContainer"]:has(#chat-box-anchor) + div[data-testid="stHorizontalBlock"] {
+                background-color: #1E293B;
+                border: 1px solid rgba(124, 58, 237, 0.4);
+                border-radius: 24px;
+                padding: 2px 15px;
+                box-shadow: 0 0 10px rgba(124, 58, 237, 0.2);
+                margin-top: 10px;
+                align-items: center;
                 transition: all 0.3s ease;
             }
-            div[data-testid="stChatInput"]:focus-within {
-                box-shadow: 0 0 15px rgba(124, 58, 237, 0.6) !important;
-                border-color: #C084FC !important;
+            div[data-testid="stElementContainer"]:has(#chat-box-anchor) + div[data-testid="stHorizontalBlock"]:focus-within {
+                box-shadow: 0 0 15px rgba(124, 58, 237, 0.6);
+                border-color: #C084FC;
             }
             
-            /* Hide the default background of the textarea */
-            div[data-testid="stChatInput"] textarea {
+            /* Remove text input default styling */
+            div[data-testid="stElementContainer"]:has(#chat-box-anchor) + div[data-testid="stHorizontalBlock"] div[data-testid="stTextInput"] input {
                 background-color: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
                 color: white !important;
             }
+            div[data-testid="stElementContainer"]:has(#chat-box-anchor) + div[data-testid="stHorizontalBlock"] div[data-testid="stTextInput"] div[data-baseweb="input"] {
+                background-color: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+            }
             
-            /* Float the audio recorder to sit next to the send button */
-            #mic-anchor { display: none; }
-            div[data-testid="stElementContainer"]:has(#mic-anchor) + div[data-testid="stElementContainer"] {
-                position: absolute;
-                bottom: 22px; /* Align vertically with chat input send button */
-                right: 65px; /* Position to the left of the send button */
-                z-index: 100;
-                width: 35px;
-                height: 35px;
+            /* Clean up the send button */
+            div[data-testid="stElementContainer"]:has(#chat-box-anchor) + div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] button {
+                background-color: transparent !important;
+                border: none !important;
+                color: #A78BFA !important;
+                font-size: 1.2rem !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+            }
+            div[data-testid="stElementContainer"]:has(#chat-box-anchor) + div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] button:hover {
+                color: #C084FC !important;
             }
             </style>
         """, unsafe_allow_html=True)
         
-        st.markdown('<span id="mic-anchor"></span>', unsafe_allow_html=True)
-        audio_bytes = audio_recorder(text="", icon_size="1.2x", key="recorder_dash")
-        prompt = st.chat_input("Mesajınızı yazın...")
+        if "temp_chat_val" not in st.session_state:
+            st.session_state.temp_chat_val = ""
+            
+        def _send_chat():
+            if st.session_state.temp_chat_val.strip():
+                st.session_state.chat_submitted = st.session_state.temp_chat_val
+                st.session_state.temp_chat_val = ""
+            
+        c_txt, c_btn, c_mic = st.columns([0.82, 0.08, 0.1], vertical_alignment="center")
+        
+        with c_txt:
+            st.text_input("hidden", placeholder="Mesajınızı yazın...", key="temp_chat_val", label_visibility="collapsed", on_change=_send_chat)
+        with c_btn:
+            st.button("➤", on_click=_send_chat, key="send_btn")
+        with c_mic:
+            audio_bytes = audio_recorder(text="", icon_size="1x", key="recorder_dash")
+            
+        prompt = st.session_state.get("chat_submitted", "")
+        if prompt:
+            st.session_state.chat_submitted = ""  # reset
 
-
-        # STT: Process recorded audio via Gemini
+        # STT: Process recorded audio via Groq
         if audio_bytes and len(audio_bytes) > 1000 and not st.session_state.audio_processed:
             st.session_state.audio_processed = True
             with st.spinner("🎙️ Sesiniz metne çevriliyor..."):
