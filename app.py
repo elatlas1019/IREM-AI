@@ -150,8 +150,8 @@ if "schedule_list" not in st.session_state:
     st.session_state.schedule_list = []
 if "audio_processed" not in st.session_state:
     st.session_state.audio_processed = False
-if "reminders" not in st.session_state:
-    st.session_state.reminders = []  # [{"task", "day", "start_time"}]
+if "shown_reminders" not in st.session_state:
+    st.session_state.shown_reminders = set()
 if "cal_start_time" not in st.session_state:
     st.session_state.cal_start_time = datetime.now(pytz.timezone("Europe/Istanbul")).replace(second=0, microsecond=0).time()
 if "cal_end_time" not in st.session_state:
@@ -162,15 +162,58 @@ st_autorefresh(interval=60_000, key="reminder_refresh")
 
 # ─── Global reminder check (every page load / auto-refresh) ─────────────────────
 _now = datetime.now(pytz.timezone("Europe/Istanbul"))
-for _r in st.session_state.reminders:
+_active_task = None
+
+for _s in st.session_state.schedule_list:
     try:
-        _r_dt = datetime.strptime(f"{_r['day']} {_r['start_time']}", "%Y-%m-%d %H:%M:%S")
-        _diff = (_r_dt - _now.replace(tzinfo=None)).total_seconds()
-        if abs(_diff) <= 60:
-            st.toast(f"⏰ Çalışma zamanı! Görev: {_r['task']}", icon="⏰")
-            st.warning(f"⏰ **Çalışma zamanı!** Görev: {_r['task']} — {_r['start_time'][:5]}")
+        _start_dt = datetime.strptime(f"{_s['day']} {_s['start_time']}", "%Y-%m-%d %H:%M:%S")
+        _end_dt = datetime.strptime(f"{_s['day']} {_s['end_time']}", "%Y-%m-%d %H:%M:%S")
+        _now_dt = _now.replace(tzinfo=None)
+        
+        if _start_dt <= _now_dt <= _end_dt:
+            _active_task = _s
+            break  # Show only one active task
     except Exception:
         pass
+
+if _active_task:
+    # Render animated banner
+    _task_name = _active_task['task']
+    _start_str = _active_task['start_time'][:5]
+    _end_str = _active_task['end_time'][:5]
+    
+    st.markdown(f"""
+        <style>
+        @keyframes pulse-border {{
+            0% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }}
+            70% {{ box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }}
+            100% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }}
+        }}
+        .active-reminder-banner {{
+            background: linear-gradient(90deg, rgba(239,68,68,0.1) 0%, rgba(185,28,28,0.2) 100%);
+            border: 2px solid #EF4444;
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            color: #FCA5A5;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: pulse-border 2s infinite;
+        }}
+        </style>
+        <div class="active-reminder-banner">
+            ⏰ Çalışma zamanı! Görev: {_task_name} | Başlangıç: {_start_str} &rarr; Bitiş: {_end_str}
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # Toast trigger (only once)
+    _task_id = f"{_task_name}_{_active_task['day']}_{_active_task['start_time']}"
+    if _task_id not in st.session_state.shown_reminders:
+        st.toast(f"⏰ Çalışma zamanı! Görev: {_task_name}", icon="⏰")
+        st.session_state.shown_reminders.add(_task_id)
+
 
 # --- SIDEBAR ---
 with st.sidebar:
@@ -389,12 +432,6 @@ elif st.session_state.current_panel == "calendar":
                     "end": f"{c_day} {c_end_t}"
                 }
                 st.session_state.schedule_list.append(new_session)
-                # Also save to reminders list for the global reminder check
-                st.session_state.reminders.append({
-                    "task": c_task,
-                    "day": str(c_day),
-                    "start_time": str(c_start_t)
-                })
                 st.success(f"{c_task} kaydedildi!")
 
     with col_v:
