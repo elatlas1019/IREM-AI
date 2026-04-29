@@ -322,8 +322,8 @@ if st.session_state.current_panel == "dashboard":
                 box-shadow: none !important;
                 padding: 0 !important;
                 border-radius: 12px !important;
-                width: 36px !important;
-                height: 36px !important;
+                width: 44px !important;
+                height: 44px !important;
                 min-height: 0 !important;
                 display: flex !important;
                 align-items: center !important;
@@ -334,13 +334,23 @@ if st.session_state.current_panel == "dashboard":
                 color: white !important;
             }
             
-            /* Style the microphone iframe */
+            /* User requested mic styles */
+            .mic-container audio-recorder {
+                width: 44px !important;
+                height: 44px !important;
+                border-radius: 50% !important;
+                background: #22c55e !important;
+            }
+            .audio-recorder-status { display: none !important; }
+            .audio-recorder { width: 44px !important; height: 44px !important; border-radius: 50% !important; background-color: #22c55e !important; }
+            
+            /* Ensure iframe matches the 44px size */
             div[data-testid="stElementContainer"]:has(#chat-box-anchor) + div[data-testid="stHorizontalBlock"] iframe {
                 background-color: #22c55e !important;
-                border-radius: 12px !important;
+                border-radius: 50% !important;
                 border: none !important;
-                width: 36px !important;
-                height: 36px !important;
+                width: 44px !important;
+                height: 44px !important;
             }
             </style>
         """, unsafe_allow_html=True)
@@ -355,14 +365,16 @@ if st.session_state.current_panel == "dashboard":
                 st.session_state.chat_submitted = st.session_state.temp_chat_val
                 st.session_state.temp_chat_val = ""
             
-        c_txt, c_btn, c_mic = st.columns([0.82, 0.08, 0.1], vertical_alignment="center")
+        c_txt, c_btn, c_mic = st.columns([0.80, 0.10, 0.10], vertical_alignment="center")
         
         with c_txt:
             st.text_input("hidden", placeholder="Mesajınızı yazın...", key="temp_chat_val", label_visibility="collapsed", on_change=_send_chat)
         with c_btn:
             st.button("➤", on_click=_send_chat, key="send_btn")
         with c_mic:
-            audio_bytes = audio_recorder(key="recorder_dash")
+            st.markdown('<div class="mic-container">', unsafe_allow_html=True)
+            audio_bytes = audio_recorder(pause_threshold=2.0, key="recorder_dash")
+            st.markdown('</div>', unsafe_allow_html=True)
             
         prompt = st.session_state.get("chat_submitted", "")
         if prompt:
