@@ -14,15 +14,19 @@ from langchain_core.messages import HumanMessage
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse, RedirectResponse
 import io
+import os
 import urllib.request
-from fpdf import FPDF
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
-# --- AUTOMATIC FONT DOWNLOAD (Fix 4) ---
+# --- AUTOMATIC FONT DOWNLOAD ---
 font_path = "DejaVuSans.ttf"
 if not os.path.exists(font_path):
     try:
         urllib.request.urlretrieve(
-            "https://github.com/reingart/pyfpdf/raw/master/fpdf/font/DejaVuSans.ttf",
+            "https://github.com/dejavu-fonts/dejavu-fonts/raw/master/ttf/DejaVuSans.ttf",
             font_path
         )
     except Exception as e:
@@ -95,38 +99,42 @@ from reportlab.lib.units import cm
 import io
 
 
-def create_pdf_buffer(content, title_text="IREM AI - Not"):
-    pdf = FPDF()
-    pdf.add_page()
-    
-    # Add DejaVu font for Turkish character support
+def create_pdf_buffer(content, title="IREM AI"):
+    # Ensure font is registered
     if os.path.exists(font_path):
-        pdf.add_font('DejaVu', '', font_path, uni=True)
-        pdf.set_font('DejaVu', size=16)
+        try:
+            pdfmetrics.registerFont(TTFont('DejaVu', font_path))
+            FONT_NAME = 'DejaVu'
+        except:
+            FONT_NAME = 'Helvetica'
     else:
-        pdf.set_font('Arial', 'B', 16)
-        
-    # Title
-    pdf.cell(0, 10, title_text, ln=True, align='C')
-    pdf.ln(10)
-    
-    # Content (Fix 5: Full content with multi_cell)
-    if os.path.exists(font_path):
-        pdf.set_font('DejaVu', size=12)
-    else:
-        pdf.set_font('Arial', size=12)
-        
-    for line in content.split('\n'):
-        # Multi-cell handles line wrapping and multiple lines
-        pdf.multi_cell(0, 8, line)
+        FONT_NAME = 'Helvetica'
         
     buffer = io.BytesIO()
-    pdf_str = pdf.output(dest='S')
-    if isinstance(pdf_str, str):
-        buffer.write(pdf_str.encode('latin1')) # fpdf1/2 output handling
-    else:
-        buffer.write(pdf_str)
+    c = canvas.Canvas(buffer, pagesize=A4)
+    
+    width, height = A4
+    y = height - 50
+    
+    # Title
+    c.setFont(FONT_NAME, 16)
+    c.drawString(50, y, title)
+    y -= 30
+    
+    # Content
+    c.setFont(FONT_NAME, 11)
+    for line in content.split('\n'):
+        if y < 50:
+            c.showPage()
+            c.setFont(FONT_NAME, 11)
+            y = height - 50
         
+        # Simple line clipping for very long lines to avoid overflow
+        text_line = line[:100] if len(line) > 100 else line
+        c.drawString(50, y, text_line)
+        y -= 16
+    
+    c.save()
     buffer.seek(0)
     return buffer
 

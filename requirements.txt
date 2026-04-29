@@ -14,7 +14,7 @@ python-multipart
 httpx
 aiofiles
 langchain-groq
-fpdf2
+reportlab
 streamlit
 pandas
 audio-recorder-streamlit
