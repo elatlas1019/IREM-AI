@@ -1,6 +1,7 @@
 import os
 import random
 import re
+import streamlit as st
 from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import AIMessage, SystemMessage
@@ -38,20 +39,18 @@ QUOTES = {
     ]
 }
 
-# ─── LLM Getter (No MockLLM anymore) ───────────────────────────────────────────
+# ─── LLM Getter ────────────────────────────────────────────────────────────────
 def get_llm(agent_type="PLAN"):
-    # Priority: Anthropic -> Groq -> Google
-    # We use os.environ.get as requested by user
-    anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
-    groq_key = os.environ.get("GROQ_API_KEY")
-    google_key = os.environ.get("GOOGLE_API_KEY")
+    # Access API keys from environment or Streamlit secrets
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY") or st.secrets.get("ANTHROPIC_API_KEY")
+    google_key = os.environ.get("GOOGLE_API_KEY") or st.secrets.get("GOOGLE_API_KEY")
 
     if anthropic_key:
         return ChatAnthropic(model="claude-3-5-sonnet-20240620", anthropic_api_key=anthropic_key)
     elif google_key:
         return ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=google_key)
     else:
-        raise ValueError("CRITICAL ERROR: No API key found in environment variables. Please check Streamlit Secrets.")
+        raise ValueError("CRITICAL ERROR: No API key found. Please configure ANTHROPIC_API_KEY in Streamlit Secrets.")
 
 
 # ─── Generic Node ──────────────────────────────────────────────────────────────
@@ -71,7 +70,7 @@ def generic_node(state: AgentState, agent_type: str, system_prompts: dict):
 
     messages = [SystemMessage(content=system_msg)] + state["messages"]
 
-    # We call the real LLM directly. Any error will bubble up to indicate API issue.
+    # We call the real LLM directly. No demo fallbacks.
     response = llm.invoke(messages)
     return {"messages": [response]}
 
