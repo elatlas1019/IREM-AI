@@ -373,7 +373,7 @@ if st.session_state.current_panel == "dashboard":
         st.markdown("### 📄 Çalışma Alanı")
         last_assist = next(
             (m for m in reversed(st.session_state.messages) 
-             if m.get("role") == "assistant"), 
+             if m.get("role") == "assistant" and len(m.get("content","")) > 100), 
             None
         )
         if last_assist:
@@ -390,7 +390,7 @@ if st.session_state.current_panel == "dashboard":
                 label="📥 Notu İndir (.txt)",
                 data=note_data,
                 file_name="irem_not.txt",
-                mime="text/plain",
+                mime="text/plain; charset=utf-8",
                 use_container_width=True
             )
         else:

@@ -29,29 +29,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- TEXT REPORT GENERATION (Clean & Robust) ---
+# --- TEXT REPORT GENERATION (Turkish Support) ---
 def create_pdf_buffer(content: str, title: str = "IREM AI") -> bytes:
     import textwrap
     
-    def clean(text):
-        if not text: return ""
-        # Force ASCII for download compatibility, though utf-8 is fine for txt
-        return text.encode('ascii', 'ignore').decode('ascii')
-    
+    # We keep Turkish characters now as we are using .txt with UTF-8
     lines = []
     lines.append(f"{'='*60}")
-    lines.append(f"  {clean(title)}")
+    lines.append(f"  {title}")
     lines.append(f"{'='*60}")
     lines.append("")
     
-    for para in clean(content).split('\n'):
+    for para in content.split('\n'):
         if para.strip():
+            # Wrap text to 80 characters for better readability in text editors
             wrapped = textwrap.wrap(para, width=80)
             lines.extend(wrapped)
         else:
             lines.append("")
     
     full_text = '\n'.join(lines)
+    # Encode with UTF-8 to preserve Turkish characters (ş, ğ, ı, etc.)
     return full_text.encode('utf-8')
 
 # --- ROUTES ---
@@ -86,7 +84,8 @@ async def generate_pdf_endpoint(request: Request):
     content = body.get("content", "İçerik yok")
     title_text = body.get("title", "IREM AI - Not")
     buffer_bytes = create_pdf_buffer(content, title_text)
-    return StreamingResponse(io.BytesIO(buffer_bytes), media_type="text/plain", headers={"Content-Disposition": f"attachment; filename=not.txt"})
+    # Using charset=utf-8 to ensure proper display in browsers/editors
+    return StreamingResponse(io.BytesIO(buffer_bytes), media_type="text/plain; charset=utf-8", headers={"Content-Disposition": f"attachment; filename=not.txt"})
 
 # --- WEBSOCKET CHAT ---
 
