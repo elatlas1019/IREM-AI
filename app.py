@@ -267,13 +267,14 @@ if st.session_state.current_panel == "dashboard":
         </div>
     """, unsafe_allow_html=True)
 
+    st.markdown("<br><br>", unsafe_allow_html=True)
+
     col_chat, col_doc = st.columns([1.1, 1.4], gap="large")
     
     with col_chat:
         chat_sub = st.container(height=450, border=False)
         with chat_sub:
-            if not st.session_state.messages:
-                st.markdown(f'<div class="chat-bubble assistant-msg">Merhaba {st.session_state.user_name}! Bugün sana nasıl yardımcı olabilirim? 💠</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="chat-bubble assistant-msg">Merhaba {st.session_state.user_name}! Bugün sana nasıl yardımcı olabilirim? 💠</div>', unsafe_allow_html=True)
             for m in st.session_state.messages:
                 cls = "user-msg" if m["role"] == "user" else "assistant-msg"
                 st.markdown(f'<div class="chat-bubble {cls}">{m["content"]}</div>', unsafe_allow_html=True)
@@ -314,18 +315,37 @@ if st.session_state.current_panel == "dashboard":
             
             /* Clean up the send button */
             div[data-testid="stElementContainer"]:has(#chat-box-anchor) + div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] button {
-                background-color: transparent !important;
+                background: linear-gradient(135deg, #7C3AED, #EC4899) !important;
                 border: none !important;
-                color: #A78BFA !important;
-                font-size: 1.2rem !important;
+                color: white !important;
+                font-size: 1.1rem !important;
                 box-shadow: none !important;
                 padding: 0 !important;
+                border-radius: 12px !important;
+                width: 36px !important;
+                height: 36px !important;
+                min-height: 0 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
             }
             div[data-testid="stElementContainer"]:has(#chat-box-anchor) + div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] button:hover {
-                color: #C084FC !important;
+                box-shadow: 0 0 10px rgba(236, 72, 153, 0.6) !important;
+                color: white !important;
+            }
+            
+            /* Style the microphone iframe */
+            div[data-testid="stElementContainer"]:has(#chat-box-anchor) + div[data-testid="stHorizontalBlock"] iframe {
+                background-color: #22c55e !important;
+                border-radius: 12px !important;
+                border: none !important;
+                width: 36px !important;
+                height: 36px !important;
             }
             </style>
         """, unsafe_allow_html=True)
+        
+        st.markdown("<br>", unsafe_allow_html=True)
         
         if "temp_chat_val" not in st.session_state:
             st.session_state.temp_chat_val = ""
@@ -342,7 +362,7 @@ if st.session_state.current_panel == "dashboard":
         with c_btn:
             st.button("➤", on_click=_send_chat, key="send_btn")
         with c_mic:
-            audio_bytes = audio_recorder(text="", icon_size="1x", key="recorder_dash")
+            audio_bytes = audio_recorder(text="", icon_size="1x", icon_color="#FFFFFF", key="recorder_dash")
             
         prompt = st.session_state.get("chat_submitted", "")
         if prompt:
