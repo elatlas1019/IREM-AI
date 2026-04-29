@@ -24,7 +24,7 @@ def get_llm():
     try:
         if is_valid_key(gemini_key):
             from langchain_google_genai import ChatGoogleGenerativeAI
-            return ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.7, google_api_key=gemini_key)
+            return ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.7, google_api_key=gemini_key)
         elif is_valid_key(groq_key):
             from langchain_groq import ChatGroq
             return ChatGroq(model_name="llama-3.3-70b-versatile", temperature=0.7)
@@ -42,7 +42,7 @@ def get_json_llm():
     try:
         if is_valid_key(gemini_key):
             from langchain_google_genai import ChatGoogleGenerativeAI
-            return ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0, google_api_key=gemini_key)
+            return ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0, google_api_key=gemini_key)
         elif is_valid_key(groq_key):
             from langchain_groq import ChatGroq
             return ChatGroq(model_name="llama-3.3-70b-versatile", temperature=0)

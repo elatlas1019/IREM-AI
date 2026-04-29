@@ -53,7 +53,7 @@ def get_llm(agent_type="PLAN"):
     gemini_key = st.secrets.get("GEMINI_API_KEY") or os.environ.get("GEMINI_API_KEY") or st.secrets.get("GOOGLE_API_KEY") or os.environ.get("GOOGLE_API_KEY")
 
     if gemini_key:
-        return ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=gemini_key)
+        return ChatGoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=gemini_key)
     else:
         return MockLLM()
 
