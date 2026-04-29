@@ -371,29 +371,19 @@ if st.session_state.current_panel == "dashboard":
 
     with col_doc:
         st.markdown("### 📄 Çalışma Alanı")
-        
-        # Get ANY last assistant message, no length filter
         last_assist = next(
             (m for m in reversed(st.session_state.messages) 
              if m.get("role") == "assistant"),
             None
         )
-        
         if last_assist and last_assist.get("content"):
             content = last_assist["content"]
             
-            # Display content
-            st.markdown(
-                f'<div style="background:#1E293B; border-radius:16px; '
-                f'padding:20px; height:400px; overflow-y:auto; '
-                f'color:#F1F5F9; font-size:0.9rem; line-height:1.7;">'
-                f'{content}</div>',
-                unsafe_allow_html=True
-            )
+            # Show content beautifully with proper markdown rendering
+            with st.container(height=420, border=False):
+                st.markdown(content)
             
-            st.markdown("<br>", unsafe_allow_html=True)
-            
-            # Always show download button when there is content
+            # Always show download button
             note_bytes = content.encode('utf-8')
             st.download_button(
                 label="📥 Notu İndir",
@@ -404,13 +394,7 @@ if st.session_state.current_panel == "dashboard":
                 key="download_note"
             )
         else:
-            st.markdown(
-                '<div style="background:#1E293B; border-radius:16px; '
-                'padding:60px 20px; text-align:center; color:#94A3B8;">'
-                '<div style="font-size:3rem">📝</div>'
-                '<p>AI ile konuş, notların burada çıkar.</p></div>',
-                unsafe_allow_html=True
-            )
+            st.info("AI ile konuş, notların burada çıkar.")
 
 elif st.session_state.current_panel == "goals":
     st.markdown("## 🎯 Hedeflerim")
