@@ -3,7 +3,6 @@ import random
 import re
 from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_groq import ChatGroq
 from langchain_core.messages import AIMessage, SystemMessage
 from .state import AgentState
 
@@ -49,8 +48,6 @@ def get_llm(agent_type="PLAN"):
 
     if anthropic_key:
         return ChatAnthropic(model="claude-3-5-sonnet-20240620", anthropic_api_key=anthropic_key)
-    elif groq_key:
-        return ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=groq_key)
     elif google_key:
         return ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=google_key)
     else:

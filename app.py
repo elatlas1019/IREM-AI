@@ -6,7 +6,7 @@ import pandas as pd
 from datetime import datetime
 from audio_recorder_streamlit import audio_recorder
 from langchain_core.messages import HumanMessage
-from backend.main import create_pdf_buffer, groq_client
+from backend.main import create_pdf_buffer
 from backend.agents.graph import coaching_agent_app
 from backend.agents.specialized import QUOTES
 
@@ -203,19 +203,10 @@ if st.session_state.current_panel == "dashboard":
     prompt = None
     if audio_bytes is not None and len(audio_bytes) > 0:
         with st.spinner("Ses işleniyor..."):
-            with open("temp_audio.wav", "wb") as f:
-                f.write(audio_bytes)
-            try:
-                with open("temp_audio.wav", "rb") as file:
-                    transcription = groq_client.audio.transcriptions.create(
-                        file=("temp_audio.wav", file.read()),
-                        model="whisper-large-v3-turbo",
-                        response_format="text",
-                        language="tr"
-                    )
-                prompt = transcription
-            except Exception as e:
-                st.error(f"Transkripsiyon hatası: {e}")
+            # Note: Voice processing is temporarily disabled as we moved away from Groq
+            # but we keep the logic structure for future integration if needed.
+            st.info("Sesli komut özelliği şu an yapılandırma aşamasındadır. Lütfen metin girişini kullanın.")
+            prompt = None
     
     # Text input
     chat_prompt = st.chat_input("Mesajınızı yazın...")
