@@ -7,7 +7,6 @@ from fastapi import FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconn
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse, RedirectResponse
 from sqlalchemy.orm import Session
-from fpdf import FPDF
 
 from . import models, schemas, database
 from .agents.graph import coaching_agent_app
@@ -30,38 +29,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- PDF GENERATION (ASCII Only Version) ---
-def create_pdf_buffer(content, title="IREM AI"):
+# --- TEXT REPORT GENERATION (Clean & Robust) ---
+def create_pdf_buffer(content: str, title: str = "IREM AI") -> bytes:
+    import textwrap
+    
     def clean(text):
-        if not text:
-            return ""
-        # The key fix: guaranteed no encoding errors by forcing ASCII
-        text = text.encode('ascii', 'ignore').decode('ascii')
-        return text
-
-    try:
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Helvetica", size=16)
-        pdf.cell(0, 10, clean(title), ln=True)
-        pdf.ln(5)
-        pdf.set_font("Helvetica", size=11)
-        for line in clean(content).split('\n'):
-            # Multi-cell handles wrapping, line[:200] ensures no single line is too wide
-            pdf.multi_cell(0, 7, line[:200] if line.strip() else " ")
-        
-        output = pdf.output(dest='S')
-        if isinstance(output, str):
-            output = output.encode('latin-1')
-        buffer = io.BytesIO(output)
-        buffer.seek(0)
-        return buffer
-    except Exception as e:
-        # Fallback: return plain text as bytes if PDF fails
-        buffer = io.BytesIO()
-        buffer.write(clean(content).encode('ascii', 'ignore'))
-        buffer.seek(0)
-        return buffer
+        if not text: return ""
+        # Force ASCII for download compatibility, though utf-8 is fine for txt
+        return text.encode('ascii', 'ignore').decode('ascii')
+    
+    lines = []
+    lines.append(f"{'='*60}")
+    lines.append(f"  {clean(title)}")
+    lines.append(f"{'='*60}")
+    lines.append("")
+    
+    for para in clean(content).split('\n'):
+        if para.strip():
+            wrapped = textwrap.wrap(para, width=80)
+            lines.extend(wrapped)
+        else:
+            lines.append("")
+    
+    full_text = '\n'.join(lines)
+    return full_text.encode('utf-8')
 
 # --- ROUTES ---
 
@@ -94,8 +85,8 @@ async def generate_pdf_endpoint(request: Request):
     body = await request.json()
     content = body.get("content", "İçerik yok")
     title_text = body.get("title", "IREM AI - Not")
-    buffer = create_pdf_buffer(content, title_text)
-    return StreamingResponse(buffer, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=not.pdf"})
+    buffer_bytes = create_pdf_buffer(content, title_text)
+    return StreamingResponse(io.BytesIO(buffer_bytes), media_type="text/plain", headers={"Content-Disposition": f"attachment; filename=not.txt"})
 
 # --- WEBSOCKET CHAT ---
 

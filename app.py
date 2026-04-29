@@ -371,30 +371,36 @@ if st.session_state.current_panel == "dashboard":
 
     with col_doc:
         st.markdown("### 📄 Çalışma Alanı")
-        
-        last_assist = next((m for m in reversed(st.session_state.messages) if m.get("role") == "assistant"), None)
-        
+        last_assist = next(
+            (m for m in reversed(st.session_state.messages) 
+             if m.get("role") == "assistant"), 
+            None
+        )
         if last_assist:
-            # Show content beautifully in a scrollable container
-            with st.container(height=450, border=False):
-                st.markdown(last_assist["content"])
-            
-            # PDF download button below
-            pdf_data = create_pdf_buffer(last_assist["content"], "IREM AI - Not")
+            content = last_assist["content"]
+            st.markdown(
+                f'<div style="background:#1E293B; border-radius:16px; '
+                f'padding:20px; height:420px; overflow-y:auto; '
+                f'color:#F1F5F9; font-size:0.9rem; line-height:1.6;">'
+                f'{content}</div>',
+                unsafe_allow_html=True
+            )
+            note_data = create_pdf_buffer(content, "IREM AI - Not")
             st.download_button(
-                label="📥 PDF Olarak İndir",
-                data=pdf_data,
-                file_name="irem_not.pdf",
-                mime="application/pdf",
+                label="📥 Notu İndir (.txt)",
+                data=note_data,
+                file_name="irem_not.txt",
+                mime="text/plain",
                 use_container_width=True
             )
         else:
-            st.markdown("""
-            <div style="color:#94A3B8; text-align:center; margin-top:80px;">
-                <div style="font-size:3rem;">📝</div>
-                <p>AI ile sohbet et, notların burada görünecek.</p>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(
+                '<div style="background:#1E293B; border-radius:16px; '
+                'padding:60px 20px; text-align:center; color:#94A3B8;">'
+                '<div style="font-size:3rem">📝</div>'
+                '<p>AI ile konuş, notların burada çıkar.</p></div>',
+                unsafe_allow_html=True
+            )
 
 elif st.session_state.current_panel == "goals":
     st.markdown("## 🎯 Hedeflerim")
