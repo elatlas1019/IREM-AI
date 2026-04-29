@@ -18,5 +18,5 @@ reportlab
 streamlit
 pandas
 audio-recorder-streamlit
-openai
+anthropic
 plotly

@@ -121,7 +121,7 @@ class MockLLM:
 def get_llm(agent_type="PLAN"):
     if os.getenv("ANTHROPIC_API_KEY"):
         print(f"DEBUG: Using Anthropic for {agent_type}", flush=True)
-        return ChatAnthropic(model="claude-3-5-sonnet-20240620")
+        return ChatAnthropic(model="claude-sonnet-4-20250514")
     elif os.getenv("GROQ_API_KEY"):
         print(f"DEBUG: Using Groq for {agent_type}", flush=True)
         return ChatGroq(model="llama-3.3-70b-versatile")

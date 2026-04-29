@@ -13,7 +13,8 @@ from backend.agents.specialized import QUOTES
 import random
 import sqlite3
 from audio_recorder_streamlit import audio_recorder
-from openai import OpenAI
+import anthropic
+from groq import Groq
 import plotly.express as px
 import pandas as pd
 
@@ -44,8 +45,23 @@ def init_local_db():
 
 init_local_db()
 
-# OpenAI Client (Fix 4)
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Anthropic Client (Fix: No crash if key missing)
+try:
+    if os.getenv("ANTHROPIC_API_KEY"):
+        anthropic_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    else:
+        anthropic_client = None
+except Exception as e:
+    anthropic_client = None
+
+# Groq Client for Voice (since we removed OpenAI)
+try:
+    if os.getenv("GROQ_API_KEY"):
+        groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+    else:
+        groq_client = None
+except Exception as e:
+    groq_client = None
 
 # Load env
 load_dotenv()
@@ -259,6 +275,12 @@ def check_alarms():
 
 check_alarms()
 
+# --- API KEY WARNINGS ---
+if not anthropic_client:
+    st.error("⚠️ ANTHROPIC_API_KEY eksik veya hatalı. Zihin koçu çalışmayabilir.")
+if not groq_client:
+    st.warning("⚠️ GROQ_API_KEY eksik. Sesli komut (Whisper) özelliği kapalı.")
+
 # --- Main Logic ---
 if st.session_state.current_panel == "dashboard":
     # Header
@@ -299,15 +321,23 @@ if st.session_state.current_panel == "dashboard":
         
         if audio_bytes and "last_audio" not in st.session_state or st.session_state.get("last_audio") != audio_bytes:
             st.session_state.last_audio = audio_bytes
-            with st.spinner("Ses çözülüyor..."):
-                with open("temp_audio.wav", "wb") as f:
-                    f.write(audio_bytes)
-                try:
-                    with open("temp_audio.wav", "rb") as audio_file:
-                        transcript = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
-                        st.session_state.pending_voice_text = transcript.text
-                except Exception as e:
-                    st.error(f"Fısıltı hatası: {e}")
+            if not groq_client:
+                st.error("Groq API anahtarı eksik. Sesli komut çalışmıyor.")
+            else:
+                with st.spinner("Ses çözülüyor (Groq Whisper)..."):
+                    with open("temp_audio.wav", "wb") as f:
+                        f.write(audio_bytes)
+                    try:
+                        with open("temp_audio.wav", "rb") as audio_file:
+                            # Using Groq for transcription as it's a great alternative to OpenAI Whisper
+                            transcription = groq_client.audio.transcriptions.create(
+                                file=("temp_audio.wav", audio_file.read()),
+                                model="whisper-large-v3",
+                                response_format="verbose_json",
+                            )
+                            st.session_state.pending_voice_text = transcription.text
+                    except Exception as e:
+                        st.error(f"Ses çözümleme hatası: {e}")
 
         # Chat Input Area
         prompt = st.chat_input("Zihin koçun burada, hadi konuşalım...")
