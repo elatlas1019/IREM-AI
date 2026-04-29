@@ -278,9 +278,46 @@ if st.session_state.current_panel == "dashboard":
                 cls = "user-msg" if m["role"] == "user" else "assistant-msg"
                 st.markdown(f'<div class="chat-bubble {cls}">{m["content"]}</div>', unsafe_allow_html=True)
         
-        # ─── Audio Input ────────────────────────────────────────────────────────
-        audio_bytes = audio_recorder(text="🎙️", icon_size="2x", key="recorder_dash")
+        # ─── Unified Audio & Text Input ─────────────────────────────────────────
+        st.markdown("""
+            <style>
+            /* Unified Chat Input Styling */
+            div[data-testid="stChatInput"] {
+                background-color: #1E293B !important;
+                border: 1px solid rgba(124, 58, 237, 0.4) !important;
+                border-radius: 24px !important;
+                box-shadow: 0 0 10px rgba(124, 58, 237, 0.2) !important;
+                padding-right: 50px !important; /* Make room for mic */
+                transition: all 0.3s ease;
+            }
+            div[data-testid="stChatInput"]:focus-within {
+                box-shadow: 0 0 15px rgba(124, 58, 237, 0.6) !important;
+                border-color: #C084FC !important;
+            }
+            
+            /* Hide the default background of the textarea */
+            div[data-testid="stChatInput"] textarea {
+                background-color: transparent !important;
+                color: white !important;
+            }
+            
+            /* Float the audio recorder to sit next to the send button */
+            #mic-anchor { display: none; }
+            div[data-testid="stElementContainer"]:has(#mic-anchor) + div[data-testid="stElementContainer"] {
+                position: absolute;
+                bottom: 22px; /* Align vertically with chat input send button */
+                right: 65px; /* Position to the left of the send button */
+                z-index: 100;
+                width: 35px;
+                height: 35px;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+        
+        st.markdown('<span id="mic-anchor"></span>', unsafe_allow_html=True)
+        audio_bytes = audio_recorder(text="", icon_size="1.2x", key="recorder_dash")
         prompt = st.chat_input("Mesajınızı yazın...")
+
 
         # STT: Process recorded audio via Gemini
         if audio_bytes and len(audio_bytes) > 1000 and not st.session_state.audio_processed:
