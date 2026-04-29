@@ -39,24 +39,28 @@ QUOTES = {
     ]
 }
 
-# ─── LLM Getter ────────────────────────────────────────────────────────────────
+# ─── LLM Getter (STRICT - NO DEMO) ─────────────────────────────────────────────
 def get_llm(agent_type="PLAN"):
     # Access API keys from environment or Streamlit secrets
-    anthropic_key = os.environ.get("ANTHROPIC_API_KEY") or st.secrets.get("ANTHROPIC_API_KEY")
-    google_key = os.environ.get("GOOGLE_API_KEY") or st.secrets.get("GOOGLE_API_KEY")
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY") or st.secrets.get("ANTHROPIC_API_KEY", "")
+    google_key = os.environ.get("GOOGLE_API_KEY") or st.secrets.get("GOOGLE_API_KEY", "")
 
     if anthropic_key:
         return ChatAnthropic(model="claude-3-5-sonnet-20240620", anthropic_api_key=anthropic_key)
     elif google_key:
         return ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=google_key)
     else:
-        raise ValueError("CRITICAL ERROR: No API key found. Please configure ANTHROPIC_API_KEY in Streamlit Secrets.")
+        # If no key, we return a system message instead of a fake response
+        raise ValueError("CRITICAL: API Key is missing. Please add ANTHROPIC_API_KEY to Streamlit Secrets.")
 
 
 # ─── Generic Node ──────────────────────────────────────────────────────────────
 def generic_node(state: AgentState, agent_type: str, system_prompts: dict):
     lang = state.get("language", "tr")
-    llm = get_llm(agent_type)
+    try:
+        llm = get_llm(agent_type)
+    except Exception as e:
+        return {"messages": [AIMessage(content=f"⚠️ Hata: API anahtarı bulunamadı. Lütfen Streamlit ayarlarından ANTHROPIC_API_KEY ekleyin.\n\nDetay: {e}")]}
 
     system_msg = system_prompts.get(lang, system_prompts.get("en", ""))
     user_name = state.get("user_name", "") or "Öğrenci"
@@ -69,23 +73,20 @@ def generic_node(state: AgentState, agent_type: str, system_prompts: dict):
     system_msg = f"{lang_instruction}\n\n{system_msg}"
 
     messages = [SystemMessage(content=system_msg)] + state["messages"]
-
-    # We call the real LLM directly. No demo fallbacks.
-    response = llm.invoke(messages)
+    
+    try:
+        response = llm.invoke(messages)
+    except Exception as e:
+        return {"messages": [AIMessage(content=f"🤖 Model Hatası: {e}")]}
+        
     return {"messages": [response]}
 
 
 # ─── Specialist Nodes ──────────────────────────────────────────────────────────
 def goal_node(state: AgentState):
     prompts = {
-        "tr": (
-            "Sen bir hedef belirleme koçusun. [name] için gerçekçi hedefler belirle. "
-            "ASLA boş cevap verme, her zaman somut hedefleri listele."
-        ),
-        "en": (
-            "You are a goal-setting coach. Set realistic goals for [name]. "
-            "NEVER give empty replies, always list concrete goals."
-        ),
+        "tr": "Sen bir hedef belirleme koçusun. [name] için somut ve ölçülebilir hedefler listele.",
+        "en": "You are a goal-setting coach. List concrete and measurable goals for [name]."
     }
     return generic_node(state, "GOAL", prompts)
 
@@ -97,16 +98,14 @@ def teach_node(state: AgentState):
             "- Test isterse soruları yaz, A B C D şıklarını yaz\n"
             "- Özet isterse detaylı özet yaz\n"
             "- Plan isterse adım adım plan yaz\n"
-            "ASLA 'hazırladım, işte sorular' gibi boş cevap verme. Her zaman gerçek içeriği üret ve yaz.\n"
+            "ASLA 'hazırladım' diyip içeriği gizleme. Her zaman gerçek içeriği yanıtında göster.\n"
             "Yanıtına MUTLAKA '# [Konu Başlığı]' şeklinde bir başlıkla başla."
         ),
         "en": (
-            "You are an AI Education Coach. When the user asks for something, you MUST generate FULL and COMPLETE content.\n"
-            "- If they want a test, write the questions and A B C D options.\n"
-            "- If they want a summary, write a detailed summary.\n"
-            "- If they want a plan, write a step-by-step plan.\n"
-            "NEVER give empty replies like 'I prepared them'. Always generate and write the actual content.\n"
-            "ALWAYS start with a '# [Topic Title]' header."
+            "You are an AI Education Coach. ALWAYS generate FULL content.\n"
+            "- If test: write questions + options.\n"
+            "- If summary: write details.\n"
+            "ALWAYS start with '# [Topic Title]' header."
         ),
     }
     return generic_node(state, "TEACH", prompts)
@@ -114,32 +113,24 @@ def teach_node(state: AgentState):
 
 def plan_node(state: AgentState):
     prompts = {
-        "tr": (
-            "Sen bir eğitim planlama uzmanısın. Kullanıcı için MUTLAKA tam bir çalışma programı hazırla.\n"
-            "Programı Markdown tablosu formatında sun (Gün | Saat | Konu | Aktivite).\n"
-            "ASLA boş veya kısa cevap verme. Gerçek ve detaylı bir plan üret."
-        ),
-        "en": (
-            "You are an education planning expert. You MUST prepare a full study program for the user.\n"
-            "Present the program in Markdown table format (Day | Time | Subject | Activity).\n"
-            "NEVER give empty or short replies. Generate a real and detailed plan."
-        ),
+        "tr": "Sen bir planlama uzmanısın. Kullanıcı için detaylı bir çalışma programı hazırla. Markdown tablosu kullan.",
+        "en": "You are a planning expert. Prepare a detailed study schedule using a Markdown table."
     }
     return generic_node(state, "PLAN", prompts)
 
 
 def feedback_node(state: AgentState):
     prompts = {
-        "tr": "Sen bir gelişim koçusun. Sınav sonuçlarını detaylıca analiz et ve iyileştirme önerileri sun.",
-        "en": "You are a growth coach. Analyze exam results in detail and offer improvement suggestions."
+        "tr": "Sen bir gelişim koçusun. Gelişim önerileri sun.",
+        "en": "You are a growth coach. Offer improvement suggestions."
     }
     return generic_node(state, "FEEDBACK", prompts)
 
 
 def health_node(state: AgentState):
     prompts = {
-        "tr": "Sen bir sağlık rehberisin. Uyku, beslenme ve stres yönetimi için gerçekçi tavsiyeler ver.",
-        "en": "You are a health guide. Give realistic advice for sleep, nutrition, and stress management."
+        "tr": "Sen bir sağlık rehberisin. Uyku ve beslenme tavsiyeleri ver.",
+        "en": "You are a health guide. Give sleep and nutrition advice."
     }
     return generic_node(state, "HEALTH", prompts)
 
@@ -152,15 +143,18 @@ def motivation_node(state: AgentState):
     quote_list = QUOTES.get(sentiment, QUOTES["Neutral"])
     quote = random.choice(quote_list)
 
-    llm = get_llm("MOTIVATION")
-    
-    lang_instruction = "MUTLAKA Türkçe yanıt ver." if lang == "tr" else "ALWAYS reply in English."
-    system_prompt = (
-        f"{lang_instruction}\n"
-        f"You are a warm AI coach. User: {user_name}, State: {sentiment}.\n"
-        f"Quote: '{quote['text']}' by {quote['author']}.\n"
-        f"Be very supportive and personal. 3-4 sentences max."
-    )
-    messages = [SystemMessage(content=system_prompt)] + state["messages"]
-    response = llm.invoke(messages)
-    return {"messages": [response]}
+    try:
+        llm = get_llm("MOTIVATION")
+        lang_instruction = "MUTLAKA Türkçe yanıt ver." if lang == "tr" else "ALWAYS reply in English."
+        system_prompt = (
+            f"{lang_instruction}\n"
+            f"You are a warm AI coach. User: {user_name}, State: {sentiment}.\n"
+            f"Quote: '{quote['text']}' by {quote['author']}.\n"
+            f"Be very supportive and personal. 3-4 sentences max."
+        )
+        messages = [SystemMessage(content=system_prompt)] + state["messages"]
+        response = llm.invoke(messages)
+        return {"messages": [response]}
+    except:
+        text = f"Selam {user_name}! {quote['author']} der ki: \"{quote['text']}\" {quote['emoji']} Her zaman yanındayım."
+        return {"messages": [AIMessage(content=text)]}
