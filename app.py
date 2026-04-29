@@ -370,18 +370,31 @@ if st.session_state.current_panel == "dashboard":
             st.rerun()
 
     with col_doc:
-        st.markdown('<div class="doc-panel">', unsafe_allow_html=True)
-        st.markdown('### Çalışma Alanı')
+        st.markdown("### 📄 Çalışma Alanı")
         
-        last_teach = next((m for m in reversed(st.session_state.messages) if m.get("role") == "assistant"), None)
-        if last_teach:
-            st.markdown(last_teach["content"])
-            # PDF Button
-            pdf_data = create_pdf_buffer(last_teach["content"], f"IREM AI - Not")
-            st.download_button("📄 PDF AI", data=pdf_data, file_name="irem_not.pdf", mime="application/pdf")
+        last_assist = next((m for m in reversed(st.session_state.messages) if m.get("role") == "assistant"), None)
+        
+        if last_assist:
+            # Show content beautifully in a scrollable container
+            with st.container(height=450, border=False):
+                st.markdown(last_assist["content"])
+            
+            # PDF download button below
+            pdf_data = create_pdf_buffer(last_assist["content"], "IREM AI - Not")
+            st.download_button(
+                label="📥 PDF Olarak İndir",
+                data=pdf_data,
+                file_name="irem_not.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
         else:
-            st.markdown("*Ders notları ve testler burada görünecek.*")
-        st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown("""
+            <div style="color:#94A3B8; text-align:center; margin-top:80px;">
+                <div style="font-size:3rem;">📝</div>
+                <p>AI ile sohbet et, notların burada görünecek.</p>
+            </div>
+            """, unsafe_allow_html=True)
 
 elif st.session_state.current_panel == "goals":
     st.markdown("## 🎯 Hedeflerim")

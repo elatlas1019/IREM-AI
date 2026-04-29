@@ -50,8 +50,10 @@ def create_pdf_buffer(content, title="IREM AI"):
             # Multi-cell handles wrapping, line[:200] ensures no single line is too wide
             pdf.multi_cell(0, 7, line[:200] if line.strip() else " ")
         
-        buffer = io.BytesIO()
-        pdf.output(buffer)
+        output = pdf.output(dest='S')
+        if isinstance(output, str):
+            output = output.encode('latin-1')
+        buffer = io.BytesIO(output)
         buffer.seek(0)
         return buffer
     except Exception as e:
