@@ -1,5 +1,4 @@
 streamlit
-anthropic
 langchain
 langchain-core
 fpdf2
@@ -12,8 +11,8 @@ uvicorn[standard]
 pydantic
 pydantic-settings
 langgraph
-langchain-anthropic
 langchain-google-genai
+google-generativeai
 websockets
 python-multipart
 httpx

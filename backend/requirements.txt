@@ -4,8 +4,8 @@ sqlalchemy
 pydantic
 pydantic-settings
 langgraph
-langchain-anthropic
 langchain-google-genai
+google-generativeai
 python-dotenv
 websockets
 alembic

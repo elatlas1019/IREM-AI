@@ -2,7 +2,6 @@ import os
 import random
 import re
 import streamlit as st
-from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import AIMessage, SystemMessage
 from .state import AgentState
@@ -48,18 +47,14 @@ QUOTES = {
     ]
 }
 
-# ─── LLM Getter (STRICT - NO DEMO) ─────────────────────────────────────────────
+# ─── LLM Getter (GEMINI ONLY) ──────────────────────────────────────────────────
 def get_llm(agent_type="PLAN"):
     # Access API keys from environment or Streamlit secrets
-    anthropic_key = os.environ.get("ANTHROPIC_API_KEY") or st.secrets.get("ANTHROPIC_API_KEY", "")
-    google_key = os.environ.get("GOOGLE_API_KEY") or st.secrets.get("GOOGLE_API_KEY", "")
+    gemini_key = st.secrets.get("GEMINI_API_KEY") or os.environ.get("GEMINI_API_KEY") or st.secrets.get("GOOGLE_API_KEY") or os.environ.get("GOOGLE_API_KEY")
 
-    if anthropic_key:
-        return ChatAnthropic(model="claude-3-5-sonnet-20240620", anthropic_api_key=anthropic_key)
-    elif google_key:
-        return ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=google_key)
+    if gemini_key:
+        return ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=gemini_key)
     else:
-        # If no key, we return MockLLM to allow orchestrator heuristics to trigger
         return MockLLM()
 
 
@@ -68,7 +63,7 @@ def generic_node(state: AgentState, agent_type: str, system_prompts: dict):
     lang = state.get("language", "tr")
     llm = get_llm(agent_type)
     if isinstance(llm, MockLLM):
-        return {"messages": [AIMessage(content=f"⚠️ Hata: API anahtarı bulunamadı. Lütfen Streamlit ayarlarından ANTHROPIC_API_KEY ekleyin.")]}
+        return {"messages": [AIMessage(content=f"⚠️ Hata: API anahtarı bulunamadı. Lütfen Streamlit ayarlarından GEMINI_API_KEY ekleyin.")]}
 
     system_msg = system_prompts.get(lang, system_prompts.get("en", ""))
     user_name = state.get("user_name", "") or "Öğrenci"
