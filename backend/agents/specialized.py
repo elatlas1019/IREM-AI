@@ -7,6 +7,15 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import AIMessage, SystemMessage
 from .state import AgentState
 
+class MockLLM:
+    """Mock LLM class for fallback and orchestration signaling."""
+    def __init__(self, *args, **kwargs):
+        pass
+    def invoke(self, prompt):
+        return AIMessage(content="Mock response")
+    async def ainvoke(self, prompt):
+        return AIMessage(content="Mock response")
+
 # ─── Quotes library ────────────────────────────────────────────────────────────
 QUOTES = {
     "Motivation": [
@@ -50,17 +59,16 @@ def get_llm(agent_type="PLAN"):
     elif google_key:
         return ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=google_key)
     else:
-        # If no key, we return a system message instead of a fake response
-        raise ValueError("CRITICAL: API Key is missing. Please add ANTHROPIC_API_KEY to Streamlit Secrets.")
+        # If no key, we return MockLLM to allow orchestrator heuristics to trigger
+        return MockLLM()
 
 
 # ─── Generic Node ──────────────────────────────────────────────────────────────
 def generic_node(state: AgentState, agent_type: str, system_prompts: dict):
     lang = state.get("language", "tr")
-    try:
-        llm = get_llm(agent_type)
-    except Exception as e:
-        return {"messages": [AIMessage(content=f"⚠️ Hata: API anahtarı bulunamadı. Lütfen Streamlit ayarlarından ANTHROPIC_API_KEY ekleyin.\n\nDetay: {e}")]}
+    llm = get_llm(agent_type)
+    if isinstance(llm, MockLLM):
+        return {"messages": [AIMessage(content=f"⚠️ Hata: API anahtarı bulunamadı. Lütfen Streamlit ayarlarından ANTHROPIC_API_KEY ekleyin.")]}
 
     system_msg = system_prompts.get(lang, system_prompts.get("en", ""))
     user_name = state.get("user_name", "") or "Öğrenci"
@@ -145,6 +153,8 @@ def motivation_node(state: AgentState):
 
     try:
         llm = get_llm("MOTIVATION")
+        if isinstance(llm, MockLLM):
+            raise ValueError("No API Key")
         lang_instruction = "MUTLAKA Türkçe yanıt ver." if lang == "tr" else "ALWAYS reply in English."
         system_prompt = (
             f"{lang_instruction}\n"
