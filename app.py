@@ -217,8 +217,17 @@ if _active_task:
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.markdown("<h1 style='text-align:center;'>💠 IREM AI</h1>", unsafe_allow_html=True)
-    st.markdown("---")
+    st.markdown("""
+        <div style="text-align:center; padding: 10px 0 10px 0;">
+            <div style="font-size: 2.2rem; font-weight: 800; background: linear-gradient(90deg, #C084FC, #EC4899, #3B82F6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 1px;">
+                ✨ IREM AI
+            </div>
+            <div style="font-size: 0.85rem; color: #94A3B8; font-style: italic; margin-top: 5px;">
+                Kişisel Öğrenme Koçun 🚀
+            </div>
+            <hr style="border-color: rgba(124, 58, 237, 0.2); margin-top: 15px; margin-bottom: 5px;">
+        </div>
+    """, unsafe_allow_html=True)
     
     st.session_state.user_name = st.text_input("Adın Soyadın", value=st.session_state.user_name)
     st.session_state.grade = st.selectbox("Sınıfın", ["1. Sınıf", "2. Sınıf", "3. Sınıf", "4. Sınıf", "5. Sınıf", "6. Sınıf", "7. Sınıf", "8. Sınıf", "9. Sınıf", "10. Sınıf", "11. Sınıf", "12. Sınıf", "Mezun", "Üniversite"], index=8)
@@ -314,12 +323,30 @@ if st.session_state.current_panel == "dashboard":
             
             with st.spinner("💠 Düşünüyorum..."):
                 try:
+                    # Request 1: Workspace content via run_agent
                     response_state = run_agent(state_update, config)
-                    last_msg = response_state["messages"][-1].content
+                    workspace_msg = response_state["messages"][-1].content
                     st.session_state.energy = response_state.get("energy_score", st.session_state.energy)
-                    st.session_state.messages.append({"role": "assistant", "content": last_msg})
-                    # ✅ Always update workspace with every AI response
-                    st.session_state.workspace_content = last_msg
+                    st.session_state.workspace_content = workspace_msg
+                    
+                    # Request 2: Chat response via Groq
+                    groq_key = st.secrets.get("GROQ_API_KEY") or os.environ.get("GROQ_API_KEY")
+                    chat_msg = "Senin için hazırladım ve çalışma alanına ekledim! İyi çalışmalar 📚"
+                    if groq_key:
+                        try:
+                            from groq import Groq
+                            client = Groq(api_key=groq_key)
+                            chat_prompt = f"Kullanıcı şunu sordu: '{prompt}'. Kullanıcıya kısa, samimi, 2-3 cümlelik Türkçe bir yanıt ver. İçeriği çalışma alanına eklediğini belirt."
+                            completion = client.chat.completions.create(
+                                model="llama-3.3-70b-versatile",
+                                messages=[{"role": "user", "content": chat_prompt}]
+                            )
+                            chat_msg = completion.choices[0].message.content.strip()
+                        except Exception:
+                            pass
+
+                    st.session_state.messages.append({"role": "assistant", "content": chat_msg})
+
                 except Exception as e:
                     err_msg = f"⚠️ Hata oluştu: {e}"
                     st.session_state.messages.append({"role": "assistant", "content": err_msg})
@@ -376,23 +403,48 @@ elif st.session_state.current_panel == "goals":
                 st.success("Hedef başarıyla eklendi!")
 
     with col_v:
-        st.markdown("### 📅 Aylık Hedef Takvimi")
+        st.markdown("### 📅 İlerleme Durumu")
         if st.session_state.goals_list:
-            import plotly.express as px
-            df_goals = pd.DataFrame(st.session_state.goals_list)
-            df_goals['start'] = pd.to_datetime(df_goals['start'])
-            df_goals['end'] = pd.to_datetime(df_goals['end'])
-            fig = px.timeline(df_goals, x_start="start", x_end="end", y="title", color="status",
-                             title="Hedef Zaman Çizelgesi", template="plotly_dark")
-            fig.update_yaxes(autorange="reversed")
-            st.plotly_chart(fig, use_container_width=True)
+            now_date = now_istanbul().date()
+            for g in st.session_state.goals_list:
+                try:
+                    s_date = datetime.strptime(g['start'], "%Y-%m-%d").date()
+                    e_date = datetime.strptime(g['end'], "%Y-%m-%d").date()
+                    total_days = (e_date - s_date).days
+                    if total_days <= 0: total_days = 1
+                    passed_days = (now_date - s_date).days
+                    
+                    progress = int((passed_days / total_days) * 100)
+                    if progress > 100: progress = 100
+                    if progress < 0: progress = 0
+                    
+                    if progress >= 100:
+                        color = "#10B981" # Green (Done)
+                    elif progress >= 80:
+                        color = "#F59E0B" # Orange (Near end)
+                    elif passed_days > total_days:
+                        color = "#EF4444" # Red (Overdue)
+                    else:
+                        color = "#3B82F6" # Blue (On track)
+
+                    st.markdown(f'''
+                    <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(124, 58, 237, 0.3); border-radius: 12px; padding: 15px; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <h4 style="margin: 0; color: #F8FAFC; font-size: 1.1rem;">{g['title']}</h4>
+                            <span style="font-size: 0.8rem; color: #94A3B8;">{g['start']} &rarr; {g['end']}</span>
+                        </div>
+                        <p style="margin: 0 0 12px 0; font-size: 0.9rem; color: #CBD5E1;">{g['desc']}</p>
+                        <div style="background: #0F172A; border-radius: 8px; height: 8px; width: 100%; overflow: hidden;">
+                            <div style="background: {color}; width: {progress}%; height: 100%; border-radius: 8px; transition: width 0.3s ease;"></div>
+                        </div>
+                        <div style="text-align: right; font-size: 0.8rem; color: #94A3B8; margin-top: 4px;">% {progress} Süre Doldu</div>
+                    </div>
+                    ''', unsafe_allow_html=True)
+                except Exception:
+                    pass
         else:
             st.info("Henüz bir hedef eklemediniz.")
-    
-    st.markdown("---")
-    st.markdown("### Tüm Hedefler")
-    if st.session_state.goals_list:
-        st.table(st.session_state.goals_list)
+
 
 elif st.session_state.current_panel == "calendar":
     st.markdown("## 📅 Çalışma Takvimi")
