@@ -362,7 +362,7 @@ if st.session_state.current_panel == "dashboard":
         with c_btn:
             st.button("➤", on_click=_send_chat, key="send_btn")
         with c_mic:
-            audio_bytes = audio_recorder(text="", icon_size="1x", icon_color="#FFFFFF", key="recorder_dash")
+            audio_bytes = audio_recorder(icon_color="#FFFFFF", key="recorder_dash")
             
         prompt = st.session_state.get("chat_submitted", "")
         if prompt:
