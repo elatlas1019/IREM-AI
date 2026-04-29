@@ -319,7 +319,7 @@ if st.session_state.current_panel == "dashboard":
         with col_mic:
             audio_bytes = audio_recorder(text="", icon_size="2x", neutral_color="#7C3AED")
         
-        if audio_bytes and "last_audio" not in st.session_state or st.session_state.get("last_audio") != audio_bytes:
+        if audio_bytes and len(audio_bytes) > 0 and ("last_audio" not in st.session_state or st.session_state.get("last_audio") != audio_bytes):
             st.session_state.last_audio = audio_bytes
             if not groq_client:
                 st.error("Groq API anahtarı eksik. Sesli komut çalışmıyor.")
@@ -338,6 +338,8 @@ if st.session_state.current_panel == "dashboard":
                             st.session_state.pending_voice_text = transcription.text
                     except Exception as e:
                         st.error(f"Ses çözümleme hatası: {e}")
+        elif audio_bytes is not None and len(audio_bytes) == 0:
+            st.info("Ses kaydı alınamadı, lütfen tekrar deneyin.")
 
         # Chat Input Area
         prompt = st.chat_input("Zihin koçun burada, hadi konuşalım...")

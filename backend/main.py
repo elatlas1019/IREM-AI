@@ -15,22 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse, RedirectResponse
 import io
 import os
-import urllib.request
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-
-# --- AUTOMATIC FONT DOWNLOAD ---
-font_path = "DejaVuSans.ttf"
-if not os.path.exists(font_path):
-    try:
-        urllib.request.urlretrieve(
-            "https://github.com/dejavu-fonts/dejavu-fonts/raw/master/ttf/DejaVuSans.ttf",
-            font_path
-        )
-    except Exception as e:
-        print(f"Font download error: {e}")
+from weasyprint import HTML
 
 # Create tables (for local sqlite dev)
 models.Base.metadata.create_all(bind=database.engine)
@@ -100,41 +85,33 @@ import io
 
 
 def create_pdf_buffer(content, title="IREM AI"):
-    # Ensure font is registered
-    if os.path.exists(font_path):
-        try:
-            pdfmetrics.registerFont(TTFont('DejaVu', font_path))
-            FONT_NAME = 'DejaVu'
-        except:
-            FONT_NAME = 'Helvetica'
-    else:
-        FONT_NAME = 'Helvetica'
-        
+    html_content = f"""
+    <html>
+    <head>
+    <meta charset="UTF-8">
+    <style>
+        body {{ 
+            font-family: Arial, sans-serif; 
+            padding: 40px; 
+            font-size: 13px; 
+            line-height: 1.6; 
+            color: #1a1a1a; 
+        }}
+        h1 {{ color: #7C3AED; border-bottom: 2px solid #7C3AED; padding-bottom: 10px; }}
+        pre {{ white-space: pre-wrap; word-wrap: break-word; background: #f8f9fa; padding: 15px; border-radius: 8px; }}
+    </style>
+    </head>
+    <body>
+        <h1>{title}</h1>
+        <pre>{content}</pre>
+        <div style="margin-top: 30px; font-size: 10px; color: #666; border-top: 1px solid #eee; padding-top: 10px;">
+            Bu rapor IREM AI - Akıllı Eğitim Koçu tarafından oluşturulmuştur.
+        </div>
+    </body>
+    </html>
+    """
     buffer = io.BytesIO()
-    c = canvas.Canvas(buffer, pagesize=A4)
-    
-    width, height = A4
-    y = height - 50
-    
-    # Title
-    c.setFont(FONT_NAME, 16)
-    c.drawString(50, y, title)
-    y -= 30
-    
-    # Content
-    c.setFont(FONT_NAME, 11)
-    for line in content.split('\n'):
-        if y < 50:
-            c.showPage()
-            c.setFont(FONT_NAME, 11)
-            y = height - 50
-        
-        # Simple line clipping for very long lines to avoid overflow
-        text_line = line[:100] if len(line) > 100 else line
-        c.drawString(50, y, text_line)
-        y -= 16
-    
-    c.save()
+    HTML(string=html_content).write_pdf(buffer)
     buffer.seek(0)
     return buffer
 
