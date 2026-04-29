@@ -14,22 +14,19 @@ from langchain_core.messages import HumanMessage
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse, RedirectResponse
 import io
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
-from reportlab.lib.units import inch, cm
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
-import html
+import urllib.request
+from fpdf import FPDF
 
-# Register a font that supports Turkish characters
-try:
-    pdfmetrics.registerFont(TTFont('Arial', 'C:\\Windows\\Fonts\\arial.ttf'))
-    DEFAULT_FONT = 'Arial'
-except:
-    DEFAULT_FONT = 'Helvetica'
+# --- AUTOMATIC FONT DOWNLOAD (Fix 4) ---
+font_path = "DejaVuSans.ttf"
+if not os.path.exists(font_path):
+    try:
+        urllib.request.urlretrieve(
+            "https://github.com/reingart/pyfpdf/raw/master/fpdf/font/DejaVuSans.ttf",
+            font_path
+        )
+    except Exception as e:
+        print(f"Font download error: {e}")
 
 # Create tables (for local sqlite dev)
 models.Base.metadata.create_all(bind=database.engine)
@@ -99,43 +96,37 @@ import io
 
 
 def create_pdf_buffer(content, title_text="IREM AI - Not"):
+    pdf = FPDF()
+    pdf.add_page()
+    
+    # Add DejaVu font for Turkish character support
+    if os.path.exists(font_path):
+        pdf.add_font('DejaVu', '', font_path, uni=True)
+        pdf.set_font('DejaVu', size=16)
+    else:
+        pdf.set_font('Arial', 'B', 16)
+        
+    # Title
+    pdf.cell(0, 10, title_text, ln=True, align='C')
+    pdf.ln(10)
+    
+    # Content (Fix 5: Full content with multi_cell)
+    if os.path.exists(font_path):
+        pdf.set_font('DejaVu', size=12)
+    else:
+        pdf.set_font('Arial', size=12)
+        
+    for line in content.split('\n'):
+        # Multi-cell handles line wrapping and multiple lines
+        pdf.multi_cell(0, 8, line)
+        
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
-    styles = getSampleStyleSheet()
-    
-    # Custom styles with Turkish character support
-    title_style = ParagraphStyle(
-        'CustomTitle',
-        parent=styles['Title'],
-        fontName=DEFAULT_FONT,
-        fontSize=22,
-        spaceAfter=20,
-        textColor='#7C3AED'
-    )
-    
-    normal_style = ParagraphStyle(
-        'CustomNormal',
-        parent=styles['Normal'],
-        fontName=DEFAULT_FONT,
-        fontSize=12,
-        leading=16,
-        spaceAfter=10
-    )
-    
-    story = []
-    story.append(Paragraph(title_text, title_style))
-    story.append(Spacer(1, 12))
-    
-    # Simple Markdown-ish to PDF conversion
-    lines = content.split('\n')
-    for line in lines:
-        if line.strip():
-            # Basic support for bold/italic in reportlab Paragraph
-            line = html.escape(line)
-            line = line.replace('**', '<b>').replace('__', '<i>') # Note: this is very basic
-            story.append(Paragraph(line, normal_style))
-    
-    doc.build(story)
+    pdf_str = pdf.output(dest='S')
+    if isinstance(pdf_str, str):
+        buffer.write(pdf_str.encode('latin1')) # fpdf1/2 output handling
+    else:
+        buffer.write(pdf_str)
+        
     buffer.seek(0)
     return buffer
 
@@ -146,24 +137,6 @@ async def generate_pdf_endpoint(request: Request):
     title_text = body.get("title", "IREM AI - Not")
     buffer = create_pdf_buffer(content, title_text)
     return StreamingResponse(buffer, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=not.pdf"})
-    story.append(Spacer(1, 0.5*cm))
-    
-    for line in content.split('\n'):
-        if line.strip():
-            # Escape HTML special characters
-            safe = html.escape(line)
-            # Basic markdown bold detection
-            safe = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', safe)
-            story.append(Paragraph(safe, normal_style))
-            story.append(Spacer(1, 0.1*cm))
-            
-    story.append(Spacer(1, 1*cm))
-    story.append(Paragraph("---", normal_style))
-    story.append(Paragraph("Bu rapor IREM AI - Akıllı Eğitim Koçu tarafından oluşturulmuştur.", footer_style))
-    
-    doc.build(story)
-    buffer.seek(0)
-    return StreamingResponse(buffer, media_type="application/pdf", headers={"Content-Disposition": "attachment; filename=irem-ai-not.pdf"})
 
 
 # Connection manager for websockets

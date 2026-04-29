@@ -8,43 +8,33 @@ from .state import AgentState
 
 # ─── Quotes library ────────────────────────────────────────────────────────────
 QUOTES = {
+    "Motivation": [
+        {"text": "Başarı, her gün tekrarlanan küçük çabaların toplamıdır.", "author": "Robert Collier", "emoji": "🌟"},
+        {"text": "Gelecek, bugün hazırlananlarındır.", "author": "Malcolm X", "emoji": "🚀"},
+        {"text": "En büyük zaferimiz hiç düşmemek değil, her düştüğümüzde kalkmaktır.", "author": "Konfüçyüs", "emoji": "💪"},
+        {"text": "Zorluklar, başarının değerini artıran süslerdir.", "author": "Moliere", "emoji": "💎"},
+        {"text": "Eğer fırtına çıkarsa, gemini limana yanaştırma; açık denizlere açıl.", "author": "Aristoteles", "emoji": "🌊"},
+        {"text": "Hayat, bisiklete binmek gibidir. Dengede kalmak için hareket etmelisin.", "author": "Albert Einstein", "emoji": "🚲"},
+        {"text": "Sadece güneşli günlerde yürürseniz, hedefinize asla varamazsınız.", "author": "Paulo Coelho", "emoji": "☀️"},
+        {"text": "Yapabileceğinize inanın, yolun yarısını çoktan geçtiniz demektir.", "author": "Theodore Roosevelt", "emoji": "🎯"},
+        {"text": "Damlaya damlaya göl olur; bugünkü küçük adımın yarınki başarın olacak.", "author": "Türk Atasözü", "emoji": "💧"},
+        {"text": "Asla vazgeçme. Mucizeler her gün gerçekleşir.", "author": "H. Jackson Brown Jr.", "emoji": "✨"}
+    ],
     "Tired": [
-        {"text": "Zorluklarla karşılaştığında, içindeki gücü hatırla. Güçsüz biri bu kadar yol katamazdı.", "author": "Marcus Aurelius", "emoji": "🌱"},
-        {"text": "Rest when you must, but never quit. The body tires; the will does not.", "author": "Epictetus", "emoji": "💫"},
-        {"text": "Yorgunluk, büyümenin bedelidir. Ağaçlar da fırtınada kök salar.", "author": "Rumi", "emoji": "🌊"},
-        {"text": "Between stimulus and response, there is a space. In that space is your power.", "author": "Viktor Frankl", "emoji": "🕊️"},
-        {"text": "Güneş her gün doğar. Sen de her gün yeniden başlayabilirsin.", "author": "Seneca", "emoji": "🌅"},
-        {"text": "Even the darkest night will end and the sun will rise.", "author": "Victor Hugo", "emoji": "🌤️"},
-        {"text": "Düşmek başarısızlık değildir. Düştüğün yerde kalmak başarısızlıktır.", "author": "Mary Pickford", "emoji": "🔄"},
-        {"text": "It does not matter how slowly you go as long as you do not stop.", "author": "Confucius", "emoji": "🐢"},
+        {"text": "Dinlenmekten çekinme, ama asla vazgeçme.", "author": "İrem AI", "emoji": "🛌"},
+        {"text": "Yorgunluk geçicidir, ama başarının gururu kalıcıdır.", "author": "İrem AI", "emoji": "🔋"}
     ],
     "Anxious": [
-        {"text": "Kaygı, henüz yaşanmamış acıların bedelini peşin ödemektir.", "author": "Seneca", "emoji": "🧘"},
-        {"text": "You have power over your mind, not outside events. Realize this and you will find strength.", "author": "Marcus Aurelius", "emoji": "🌸"},
-        {"text": "Gelecekten korkan, şimdiki anı kaybeder. Şimdiki ana odaklan.", "author": "Epictetus", "emoji": "✨"},
-        {"text": "Life is 10% what happens to you and 90% how you react to it.", "author": "Charles R. Swindoll", "emoji": "🎯"},
-        {"text": "Endişe bir sandalye gibidir — seni meşgul eder ama hiçbir yere götürmez.", "author": "Erma Bombeck", "emoji": "🪑"},
-        {"text": "Everything you've ever wanted is on the other side of fear.", "author": "George Addair", "emoji": "🚪"},
-        {"text": "Nefes al. Bu an geçecek. Her geçen an seni daha güçlü yapıyor.", "author": "Rumi", "emoji": "🌬️"},
-        {"text": "Courage is not the absence of fear, but acting in spite of it.", "author": "Mark Twain", "emoji": "⚔️"},
+        {"text": "Derin bir nefes al. Her şey kontrol altında.", "author": "İrem AI", "emoji": "🌬️"},
+        {"text": "Kaygı, gelecekteki bir problem için bugünden üzülmektir. Şimdiye odaklan.", "author": "İrem AI", "emoji": "🧘"}
     ],
     "Positive": [
-        {"text": "Harika gidiyorsun! Momentum'u koru — büyük başarılar böyle inşa edilir.", "author": "Isaac Newton", "emoji": "🔥"},
-        {"text": "Success is not final, failure is not fatal: it is the courage to continue that counts.", "author": "Winston Churchill", "emoji": "⚡"},
-        {"text": "Bu enerjiyle dağları aşarsın. Hedefine odaklan.", "author": "Marie Curie", "emoji": "🌟"},
-        {"text": "The more I learn, the more I realize how much I don't know — and that's exciting!", "author": "Albert Einstein", "emoji": "🚀"},
-        {"text": "Başardığın her şey, bir sonraki başarının temelidir.", "author": "Oprah Winfrey", "emoji": "🏆"},
-        {"text": "Education is the most powerful weapon you can use to change the world.", "author": "Nelson Mandela", "emoji": "💪"},
+        {"text": "Harika gidiyorsun! Bu enerjiyi koru.", "author": "İrem AI", "emoji": "🔥"},
+        {"text": "Seninle gurur duyuyorum!", "author": "İrem AI", "emoji": "❤️"}
     ],
     "Neutral": [
-        {"text": "Bugün öğrendiğin her şey, yarınki sen için bir armağandır.", "author": "Benjamin Franklin", "emoji": "💭"},
-        {"text": "The secret of getting ahead is getting started.", "author": "Mark Twain", "emoji": "🎯"},
-        {"text": "Küçük adımlar, büyük yolculuklar yapar.", "author": "Lao Tzu", "emoji": "🪐"},
-        {"text": "An investment in knowledge pays the best interest.", "author": "Benjamin Franklin", "emoji": "💡"},
-        {"text": "Merak, bilgeliğin anasıdır. Sormaya devam et.", "author": "Albert Einstein", "emoji": "🔭"},
-        {"text": "You don't have to be great to start, but you have to start to be great.", "author": "Zig Ziglar", "emoji": "🌱"},
-        {"text": "Zihin, doldurulacak bir kova değil, yakılacak bir ateştir.", "author": "Plutarch", "emoji": "🔥"},
-        {"text": "Live as if you were to die tomorrow. Learn as if you were to live forever.", "author": "Mahatma Gandhi", "emoji": "♾️"},
+        {"text": "Adım adım hedefe ilerliyoruz.", "author": "İrem AI", "emoji": "🚶"},
+        {"text": "Bugün öğrenmek için harika bir gün.", "author": "İrem AI", "emoji": "📖"}
     ]
 }
 

@@ -371,11 +371,11 @@ if st.session_state.current_panel == "dashboard":
         st.markdown('<div class="doc-panel">', unsafe_allow_html=True)
         st.markdown('### Çalışma Alanı')
         
-        last_teach = next((m for m in reversed(st.session_state.messages) if m.get("agent") in ["TEACH", "PLAN"]), None)
+        last_teach = next((m for m in reversed(st.session_state.messages) if m.get("role") == "assistant"), None)
         if last_teach:
             st.markdown(last_teach["content"])
             # PDF Button
-            pdf_data = create_pdf_buffer(last_teach["content"], f"IREM AI - {last_teach['agent']}")
+            pdf_data = create_pdf_buffer(last_teach["content"], f"IREM AI - Not")
             st.download_button("📄 PDF AI", data=pdf_data, file_name="irem_not.pdf", mime="application/pdf")
         else:
             st.markdown("*Ders notları ve testler burada görünecek.*")
@@ -469,6 +469,7 @@ elif st.session_state.current_panel == "goals":
 
 elif st.session_state.current_panel == "calendar":
     st.markdown("## 📅 Takvim")
+    st.markdown(f"🕐 {datetime.now().strftime('%H:%M:%S')}")
     st.markdown("Çalışma seanslarını kaydet ve günlük ilerlemeyi gör.")
     
     # Local DB Helpers
@@ -488,21 +489,33 @@ elif st.session_state.current_panel == "calendar":
         conn.close()
         return rows
 
-    # Add Session Form (Fix 2)
+    # Add Session Form (Fix 2 & 3)
     with st.expander("📝 Çalışma Kaydı Ekle", expanded=True):
         col1, col2 = st.columns(2)
         with col1:
             subject = st.selectbox("Ders", ["Matematik", "Fen", "Türkçe", "İngilizce", "Diğer"])
             date = st.date_input("Tarih")
         with col2:
-            t_col1, t_col2 = st.columns(2)
-            with t_col1:
-                start_t = st.time_input("Başlangıç", datetime.now().time())
-            with t_col2:
-                end_t = st.time_input("Bitiş", (datetime.now() + timedelta(minutes=45)).time())
+            st.markdown("**Başlangıç**")
+            ts_col1, ts_col2 = st.columns(2)
+            with ts_col1:
+                start_h = st.number_input("Saat", min_value=0, max_value=23, value=datetime.now().hour, key="sh")
+            with ts_col2:
+                start_m = st.number_input("Dakika", min_value=0, max_value=59, value=datetime.now().minute, key="sm")
+            
+            st.markdown("**Bitiş**")
+            te_col1, te_col2 = st.columns(2)
+            with te_col1:
+                end_h = st.number_input("Saat", min_value=0, max_value=23, value=((datetime.now() + timedelta(minutes=45)).hour), key="eh")
+            with te_col2:
+                end_m = st.number_input("Dakika", min_value=0, max_value=59, value=((datetime.now() + timedelta(minutes=45)).minute), key="em")
+                
             duration = st.number_input("Süre (dk)", min_value=1, max_value=480, value=45)
         
         if st.button("Ekle", use_container_width=True):
+            from datetime import time
+            start_t = time(hour=start_h, minute=start_m)
+            end_t = time(hour=end_h, minute=end_m)
             add_event_local(subject, date.strftime('%Y-%m-%d'), start_t.strftime('%H:%M'), end_t.strftime('%H:%M'), duration)
             st.success("Kayıt eklendi!")
             st.rerun()
