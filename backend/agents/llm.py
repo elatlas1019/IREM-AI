@@ -21,7 +21,7 @@ def get_llm():
     try:
         if is_valid_key(groq_key):
             from langchain_groq import ChatGroq
-            return ChatGroq(model_name="llama3-8b-8192", temperature=0.7)
+            return ChatGroq(model_name="llama-3.3-70b-versatile", temperature=0.7)
         else:
             print("Using Dummy LLM (No valid GROQ_API_KEY found)")
             return DummyChatLLM()
@@ -34,7 +34,7 @@ def get_json_llm():
     try:
         if is_valid_key(groq_key):
             from langchain_groq import ChatGroq
-            return ChatGroq(model_name="llama3-8b-8192", temperature=0)
+            return ChatGroq(model_name="llama-3.3-70b-versatile", temperature=0)
         else:
             return DummyLLM()
     except Exception as e:

@@ -50,7 +50,7 @@ QUOTES = {
 def get_llm(agent_type="PLAN"):
     groq_key = st.secrets.get("GROQ_API_KEY") or os.environ.get("GROQ_API_KEY")
     if groq_key:
-        return ChatGroq(model="llama3-8b-8192", groq_api_key=groq_key, temperature=0.7)
+        return ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=groq_key, temperature=0.7)
     else:
         return MockLLM()
 
