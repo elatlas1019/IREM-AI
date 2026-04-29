@@ -14,7 +14,7 @@ python-multipart
 httpx
 aiofiles
 langchain-groq
-weasyprint
+fpdf2
 streamlit
 pandas
 audio-recorder-streamlit

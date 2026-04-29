@@ -15,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse, RedirectResponse
 import io
 import os
-from weasyprint import HTML
+from fpdf import FPDF
 
 # Create tables (for local sqlite dev)
 models.Base.metadata.create_all(bind=database.engine)
@@ -85,33 +85,28 @@ import io
 
 
 def create_pdf_buffer(content, title="IREM AI"):
-    html_content = f"""
-    <html>
-    <head>
-    <meta charset="UTF-8">
-    <style>
-        body {{ 
-            font-family: Arial, sans-serif; 
-            padding: 40px; 
-            font-size: 13px; 
-            line-height: 1.6; 
-            color: #1a1a1a; 
-        }}
-        h1 {{ color: #7C3AED; border-bottom: 2px solid #7C3AED; padding-bottom: 10px; }}
-        pre {{ white-space: pre-wrap; word-wrap: break-word; background: #f8f9fa; padding: 15px; border-radius: 8px; }}
-    </style>
-    </head>
-    <body>
-        <h1>{title}</h1>
-        <pre>{content}</pre>
-        <div style="margin-top: 30px; font-size: 10px; color: #666; border-top: 1px solid #eee; padding-top: 10px;">
-            Bu rapor IREM AI - Akıllı Eğitim Koçu tarafından oluşturulmuştur.
-        </div>
-    </body>
-    </html>
-    """
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Helvetica", size=16)
+    pdf.cell(0, 10, title, ln=True)
+    pdf.ln(5)
+    pdf.set_font("Helvetica", size=11)
+    
+    # Fix Turkish chars by replacing with ASCII equivalents (for Streamlit Cloud compatibility)
+    replacements = {
+        'ş': 's', 'Ş': 'S', 'ğ': 'g', 'Ğ': 'G',
+        'ü': 'u', 'Ü': 'U', 'ö': 'o', 'Ö': 'O',
+        'ı': 'i', 'İ': 'I', 'ç': 'c', 'Ç': 'C'
+    }
+    safe_content = content
+    for tr, en in replacements.items():
+        safe_content = safe_content.replace(tr, en)
+    
+    for line in safe_content.split('\n'):
+        pdf.multi_cell(0, 7, line[:200])
+    
     buffer = io.BytesIO()
-    HTML(string=html_content).write_pdf(buffer)
+    pdf.output(buffer)
     buffer.seek(0)
     return buffer
 
