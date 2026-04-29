@@ -12,6 +12,7 @@ from langchain_core.messages import HumanMessage
 from backend.main import create_pdf_buffer
 from backend.agents.graph import coaching_agent_app
 from backend.agents.specialized import QUOTES
+from streamlit_autorefresh import st_autorefresh
 
 # ─── Istanbul Timezone ──────────────────────────────────────────────────────────
 istanbul = pytz.timezone("Europe/Istanbul")
@@ -149,6 +150,27 @@ if "schedule_list" not in st.session_state:
     st.session_state.schedule_list = []
 if "audio_processed" not in st.session_state:
     st.session_state.audio_processed = False
+if "reminders" not in st.session_state:
+    st.session_state.reminders = []  # [{"task", "day", "start_time"}]
+if "cal_start_time" not in st.session_state:
+    st.session_state.cal_start_time = datetime.now(pytz.timezone("Europe/Istanbul")).replace(second=0, microsecond=0).time()
+if "cal_end_time" not in st.session_state:
+    st.session_state.cal_end_time = datetime.now(pytz.timezone("Europe/Istanbul")).replace(second=0, microsecond=0).time()
+
+# ─── Auto-refresh every 60 seconds for reminder checks ──────────────────────────
+st_autorefresh(interval=60_000, key="reminder_refresh")
+
+# ─── Global reminder check (every page load / auto-refresh) ─────────────────────
+_now = datetime.now(pytz.timezone("Europe/Istanbul"))
+for _r in st.session_state.reminders:
+    try:
+        _r_dt = datetime.strptime(f"{_r['day']} {_r['start_time']}", "%Y-%m-%d %H:%M:%S")
+        _diff = (_r_dt - _now.replace(tzinfo=None)).total_seconds()
+        if abs(_diff) <= 60:
+            st.toast(f"⏰ Çalışma zamanı! Görev: {_r['task']}", icon="⏰")
+            st.warning(f"⏰ **Çalışma zamanı!** Görev: {_r['task']} — {_r['start_time'][:5]}")
+    except Exception:
+        pass
 
 # --- SIDEBAR ---
 with st.sidebar:
@@ -352,9 +374,12 @@ elif st.session_state.current_panel == "calendar":
         with st.form("cal_form_modern"):
             c_task = st.text_input("Görev/Ders")
             c_day = st.date_input("Gün", now)
-            c_start_t = st.time_input("Başlangıç Saati", value=now.time(), step=60)
-            c_end_t = st.time_input("Bitiş Saati", value=now.time(), step=60)
+            c_start_t = st.time_input("Başlangıç Saati", value=st.session_state.cal_start_time, step=60)
+            c_end_t = st.time_input("Bitiş Saati", value=st.session_state.cal_end_time, step=60)
             if st.form_submit_button("Takvime Ekle"):
+                # Persist chosen times to session_state so they don't reset
+                st.session_state.cal_start_time = c_start_t
+                st.session_state.cal_end_time = c_end_t
                 new_session = {
                     "task": c_task,
                     "day": str(c_day),
@@ -364,6 +389,12 @@ elif st.session_state.current_panel == "calendar":
                     "end": f"{c_day} {c_end_t}"
                 }
                 st.session_state.schedule_list.append(new_session)
+                # Also save to reminders list for the global reminder check
+                st.session_state.reminders.append({
+                    "task": c_task,
+                    "day": str(c_day),
+                    "start_time": str(c_start_t)
+                })
                 st.success(f"{c_task} kaydedildi!")
 
     with col_v:

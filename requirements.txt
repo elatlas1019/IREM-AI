@@ -20,3 +20,4 @@ aiofiles
 plotly
 pytz
 groq
+streamlit-autorefresh
