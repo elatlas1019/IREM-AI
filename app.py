@@ -156,9 +156,8 @@ with st.sidebar:
     st.markdown("---")
     
     st.session_state.user_name = st.text_input("Adın Soyadın", value=st.session_state.user_name)
-    st.session_state.grade = st.selectbox("Sınıfın", ["9. Sınıf", "10. Sınıf", "11. Sınıf", "12. Sınıf", "Mezun"], index=3)
+    st.session_state.grade = st.selectbox("Sınıfın", ["1. Sınıf", "2. Sınıf", "3. Sınıf", "4. Sınıf", "5. Sınıf", "6. Sınıf", "7. Sınıf", "8. Sınıf", "9. Sınıf", "10. Sınıf", "11. Sınıf", "12. Sınıf", "Mezun", "Üniversite"], index=8)
     
-    st.markdown("### Navigasyon")
     if st.sidebar.button("📊 Dashboard", use_container_width=True, key="nav_dash"):
         st.session_state.current_panel = "dashboard"
         st.rerun()
@@ -175,6 +174,21 @@ with st.sidebar:
 # --- MAIN DASHBOARD ---
 if st.session_state.current_panel == "dashboard":
     now = now_istanbul()
+
+    # ─── Dashboard reminder check ────────────────────────────────────────────────
+    now_ts = now_istanbul()
+    for _s in st.session_state.schedule_list:
+        try:
+            _sd = datetime.strptime(_s["day"], "%Y-%m-%d").date()
+            if _sd == now_ts.date():
+                _st = datetime.strptime(_s["start_time"], "%H:%M:%S").time()
+                _diff = (datetime.combine(_sd, _st) - now_ts.replace(tzinfo=None)).total_seconds()
+                if 0 <= _diff <= 1800:
+                    st.toast(f"🔔 Yaklaşan Oturum: {_s['task']} — {_s['start_time']}", icon="📅")
+                elif -60 <= _diff < 0:
+                    st.warning(f"⏰ **{_s['task']}** çalışma oturumun şu an başlamalı!")
+        except Exception:
+            pass
 
     # Metrics
     m1, m2, m3, m4 = st.columns(4)
@@ -338,8 +352,8 @@ elif st.session_state.current_panel == "calendar":
         with st.form("cal_form_modern"):
             c_task = st.text_input("Görev/Ders")
             c_day = st.date_input("Gün", now)
-            c_start_t = st.time_input("Başlangıç Saati", value=now.time())
-            c_end_t = st.time_input("Bitiş Saati", value=now.time())
+            c_start_t = st.time_input("Başlangıç Saati", value=now.time(), step=60)
+            c_end_t = st.time_input("Bitiş Saati", value=now.time(), step=60)
             if st.form_submit_button("Takvime Ekle"):
                 new_session = {
                     "task": c_task,
