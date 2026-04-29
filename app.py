@@ -176,43 +176,6 @@ for _s in st.session_state.schedule_list:
     except Exception:
         pass
 
-if _active_task:
-    # Render animated banner
-    _task_name = _active_task['task']
-    _start_str = _active_task['start_time'][:5]
-    _end_str = _active_task['end_time'][:5]
-    
-    st.markdown(f"""
-        <style>
-        @keyframes pulse-border {{
-            0% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }}
-            70% {{ box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }}
-            100% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }}
-        }}
-        .active-reminder-banner {{
-            background: linear-gradient(90deg, rgba(239,68,68,0.1) 0%, rgba(185,28,28,0.2) 100%);
-            border: 2px solid #EF4444;
-            border-radius: 12px;
-            padding: 15px 20px;
-            margin-bottom: 20px;
-            color: #FCA5A5;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            animation: pulse-border 2s infinite;
-        }}
-        </style>
-        <div class="active-reminder-banner">
-            ⏰ Çalışma zamanı! Görev: {_task_name} | Başlangıç: {_start_str} &rarr; Bitiş: {_end_str}
-        </div>
-    """, unsafe_allow_html=True)
-    
-    # Toast trigger (only once)
-    _task_toast_key = f"toast_shown_{_task_name}"
-    if not st.session_state.get(_task_toast_key, False):
-        st.toast(f"⏰ Çalışma zamanı! Görev: {_task_name}", icon="⏰")
-        st.session_state[_task_toast_key] = True
 
 
 # --- SIDEBAR ---
@@ -243,7 +206,42 @@ with st.sidebar:
         st.rerun()
     
     st.markdown("---")
-    st.progress(st.session_state.energy / 100, text=f"Enerji: %{st.session_state.energy}")
+    
+    if _active_task:
+        _task_name = _active_task['task']
+        _start_str = _active_task['start_time'][:5]
+        _end_str = _active_task['end_time'][:5]
+        
+        st.markdown(f"""
+            <style>
+            @keyframes pulse-border-side {{
+                0% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }}
+                70% {{ box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }}
+                100% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }}
+            }}
+            .active-reminder-sidebar {{
+                background: linear-gradient(90deg, rgba(239,68,68,0.1) 0%, rgba(185,28,28,0.2) 100%);
+                border: 2px solid #EF4444;
+                border-radius: 12px;
+                padding: 12px;
+                margin-top: 10px;
+                color: #FCA5A5;
+                font-weight: 600;
+                text-align: center;
+                animation: pulse-border-side 2s infinite;
+            }}
+            </style>
+            <div class="active-reminder-sidebar">
+                <div style="font-size:1.1rem; margin-bottom:4px;">⏰ {_task_name}</div>
+                <div style="font-size:0.85rem;">{_start_str} &rarr; {_end_str}</div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # Toast trigger (only once)
+        _task_toast_key = f"toast_shown_{_task_name}"
+        if not st.session_state.get(_task_toast_key, False):
+            st.toast(f"⏰ Çalışma zamanı! Görev: {_task_name}", icon="⏰")
+            st.session_state[_task_toast_key] = True
 
 # --- MAIN DASHBOARD ---
 if st.session_state.current_panel == "dashboard":
@@ -378,7 +376,14 @@ elif st.session_state.current_panel == "goals":
             g_desc = st.text_area("Açıklama")
             g_start = st.date_input("Başlangıç Tarihi", now_istanbul())
             g_end = st.date_input("Bitiş Tarihi", now_istanbul())
-            if st.form_submit_button("✅ Hedef Ekle"):
+            
+            c1, c2 = st.columns([1,1])
+            with c1:
+                submitted_add = st.form_submit_button("✅ Hedef Ekle", use_container_width=True)
+            with c2:
+                submitted_del_toggle = st.form_submit_button("❌ Hedef Sil", use_container_width=True)
+                
+            if submitted_add:
                 new_goal = {"title": g_title, "desc": g_desc, "start": str(g_start), "end": str(g_end), "status": "Devam Ediyor"}
                 st.session_state.goals_list.append(new_goal)
                 conn = sqlite3.connect('goals.db')
@@ -387,25 +392,30 @@ elif st.session_state.current_panel == "goals":
                 c.execute("INSERT INTO goals_v2 VALUES (?, ?, ?, ?, ?)", (g_title, g_desc, str(g_start), str(g_end), "Devam Ediyor"))
                 conn.commit(); conn.close()
                 st.success("Hedef başarıyla eklendi!")
+                st.rerun()
+                
+            if submitted_del_toggle:
+                st.session_state.goal_show_del = not st.session_state.get("goal_show_del", False)
+                st.rerun()
 
-        if st.session_state.goals_list:
-            with st.form("goal_delete_form"):
-                st.markdown("#### 🗑️ Hedef Sil")
-                goal_names = [g['title'] for g in st.session_state.goals_list]
-                goal_to_del = st.selectbox("Silinecek Hedef", goal_names)
-                if st.form_submit_button("❌ Hedef Sil"):
-                    idx = goal_names.index(goal_to_del)
-                    deleted = st.session_state.goals_list.pop(idx)
-                    try:
-                        conn = sqlite3.connect('goals.db')
-                        c = conn.cursor()
-                        c.execute("DELETE FROM goals_v2 WHERE title=?", (deleted['title'],))
-                        conn.commit()
-                        conn.close()
-                    except Exception:
-                        pass
-                    st.success(f"{deleted['title']} silindi!")
-                    st.rerun()
+        if st.session_state.get("goal_show_del", False) and st.session_state.goals_list:
+            st.markdown("#### 🗑️ Silinecek Hedefi Seçin")
+            goal_names = [g['title'] for g in st.session_state.goals_list]
+            goal_to_del = st.selectbox("Hedef Listesi", goal_names, key="goal_del_select")
+            if st.button("Kalıcı Olarak Sil", use_container_width=True, type="primary"):
+                idx = goal_names.index(goal_to_del)
+                deleted = st.session_state.goals_list.pop(idx)
+                try:
+                    conn = sqlite3.connect('goals.db')
+                    c = conn.cursor()
+                    c.execute("DELETE FROM goals_v2 WHERE title=?", (deleted['title'],))
+                    conn.commit()
+                    conn.close()
+                except Exception:
+                    pass
+                st.session_state.goal_show_del = False
+                st.success(f"{deleted['title']} silindi!")
+                st.rerun()
 
     with col_v:
         st.markdown("### 📅 İlerleme Durumu")
@@ -463,7 +473,14 @@ elif st.session_state.current_panel == "calendar":
             c_day = st.date_input("Gün", now)
             c_start_t = st.time_input("Başlangıç Saati", value=st.session_state.cal_start_time, step=60)
             c_end_t = st.time_input("Bitiş Saati", value=st.session_state.cal_end_time, step=60)
-            if st.form_submit_button("✅ Takvime Ekle"):
+            
+            c1, c2 = st.columns([1,1])
+            with c1:
+                submitted_add = st.form_submit_button("✅ Takvime Ekle", use_container_width=True)
+            with c2:
+                submitted_del_toggle = st.form_submit_button("❌ Takvimden Sil", use_container_width=True)
+                
+            if submitted_add:
                 # Persist chosen times to session_state so they don't reset
                 st.session_state.cal_start_time = c_start_t
                 st.session_state.cal_end_time = c_end_t
@@ -477,17 +494,22 @@ elif st.session_state.current_panel == "calendar":
                 }
                 st.session_state.schedule_list.append(new_session)
                 st.success(f"{c_task} kaydedildi!")
+                st.rerun()
+                
+            if submitted_del_toggle:
+                st.session_state.cal_show_del = not st.session_state.get("cal_show_del", False)
+                st.rerun()
 
-        if st.session_state.schedule_list:
-            with st.form("cal_delete_form"):
-                st.markdown("#### 🗑️ Görev Sil")
-                task_names = [f"{s['task']} ({s['day']} {s['start_time'][:5]})" for s in st.session_state.schedule_list]
-                task_to_del = st.selectbox("Silinecek Görev", task_names)
-                if st.form_submit_button("❌ Takvimden Sil"):
-                    idx = task_names.index(task_to_del)
-                    deleted = st.session_state.schedule_list.pop(idx)
-                    st.success(f"{deleted['task']} silindi!")
-                    st.rerun()
+        if st.session_state.get("cal_show_del", False) and st.session_state.schedule_list:
+            st.markdown("#### 🗑️ Silinecek Görevi Seçin")
+            task_names = [f"{s['task']} ({s['day']} {s['start_time'][:5]})" for s in st.session_state.schedule_list]
+            task_to_del = st.selectbox("Görev Listesi", task_names, key="cal_del_select")
+            if st.button("Kalıcı Olarak Sil", use_container_width=True, type="primary"):
+                idx = task_names.index(task_to_del)
+                deleted = st.session_state.schedule_list.pop(idx)
+                st.session_state.cal_show_del = False
+                st.success(f"{deleted['task']} silindi!")
+                st.rerun()
 
     with col_v:
         st.markdown("### 🗓️ Haftalık Görünüm")
