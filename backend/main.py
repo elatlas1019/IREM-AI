@@ -32,25 +32,34 @@ app.add_middleware(
 
 # --- PDF GENERATION (Clean Version) ---
 def create_pdf_buffer(content, title="IREM AI"):
+    def clean_text(text):
+        # Replace Turkish characters
+        replacements = {
+            'ş': 's', 'Ş': 'S', 'ğ': 'g', 'Ğ': 'G',
+            'ü': 'u', 'Ü': 'U', 'ö': 'o', 'Ö': 'O',
+            'ı': 'i', 'İ': 'I', 'ç': 'c', 'Ç': 'C'
+        }
+        for tr, en in replacements.items():
+            text = text.replace(tr, en)
+        # Remove ALL emojis and non-latin characters
+        text = re.sub(r'[^\x00-\x7F]+', '', text)
+        return text
+
     pdf = FPDF()
     pdf.add_page()
+    
+    safe_title = clean_text(title)
     pdf.set_font("Helvetica", size=16)
-    pdf.cell(0, 10, title, ln=True)
+    pdf.cell(0, 10, safe_title, ln=True)
     pdf.ln(5)
     pdf.set_font("Helvetica", size=11)
     
-    # Fix Turkish chars by replacing with ASCII equivalents (for Streamlit Cloud compatibility)
-    replacements = {
-        'ş': 's', 'Ş': 'S', 'ğ': 'g', 'Ğ': 'G',
-        'ü': 'u', 'Ü': 'U', 'ö': 'o', 'Ö': 'O',
-        'ı': 'i', 'İ': 'I', 'ç': 'c', 'Ç': 'C'
-    }
-    safe_content = content
-    for tr, en in replacements.items():
-        safe_content = safe_content.replace(tr, en)
-    
+    safe_content = clean_text(content)
     for line in safe_content.split('\n'):
-        pdf.multi_cell(0, 7, line[:200])
+        if line.strip():
+            pdf.multi_cell(0, 7, line[:200])
+        else:
+            pdf.ln(3)
     
     buffer = io.BytesIO()
     pdf.output(buffer)
