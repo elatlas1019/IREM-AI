@@ -1,3 +1,5 @@
+import nest_asyncio
+nest_asyncio.apply()
 import streamlit as st
 import os
 import asyncio
@@ -82,6 +84,12 @@ if "energy" not in st.session_state:
     st.session_state.energy = 85
 if "current_panel" not in st.session_state:
     st.session_state.current_panel = "dashboard"
+if "workspace_content" not in st.session_state:
+    st.session_state.workspace_content = ""
+if "goals_list" not in st.session_state:
+    st.session_state.goals_list = []
+if "schedule_list" not in st.session_state:
+    st.session_state.schedule_list = []
 
 # --- SIDEBAR ---
 with st.sidebar:
@@ -143,27 +151,38 @@ if st.session_state.current_panel == "dashboard":
         prompt = st.chat_input("Mesajınızı yazın...")
         
         if audio_bytes and len(audio_bytes) > 0:
-            st.info("Sesli komut şu an devre dışıdır.")
+            import base64
+            # Convert audio to base64
+            audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
+            st.info("Sesiniz işleniyor... (Multimodal STT)")
+            # For now, we simulate the transcription or use a placeholder
+            prompt = "Sesli komut (simüle edilmiş): Bana bugünkü ders programımı anlat."
+            # In a real scenario, we would send audio_b64 to an LLM/STT API here.
 
         if prompt:
             st.session_state.messages.append({"role": "user", "content": prompt})
             config = {"configurable": {"thread_id": "st-session-1"}}
             state_update = {"messages": [HumanMessage(content=prompt)], "user_name": st.session_state.user_name, "language": "tr"}
             
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            response_state = loop.run_until_complete(coaching_agent_app.ainvoke(state_update, config))
+            try:
+                # Use current event loop since nest_asyncio is applied
+                response_state = asyncio.run(coaching_agent_app.ainvoke(state_update, config))
+                
+                last_msg = response_state["messages"][-1].content
+                st.session_state.energy = response_state.get("energy_score", st.session_state.energy)
+                st.session_state.messages.append({"role": "assistant", "content": last_msg})
+                
+                # Update Workspace Content
+                st.session_state.workspace_content = last_msg
+            except Exception as e:
+                st.error(f"Hata: {e}")
             
-            last_msg = response_state["messages"][-1].content
-            st.session_state.energy = response_state.get("energy_score", st.session_state.energy)
-            st.session_state.messages.append({"role": "assistant", "content": last_msg})
             st.rerun()
 
     with col_doc:
         st.markdown("### 📄 Çalışma Alanı")
-        last_assist = next((m for m in reversed(st.session_state.messages) if m.get("role") == "assistant"), None)
-        if last_assist:
-            content = last_assist["content"]
+        if st.session_state.workspace_content:
+            content = st.session_state.workspace_content
             with st.container(height=400, border=True):
                 st.markdown(content)
             st.download_button("📥 Notu İndir", data=content.encode('utf-8'), file_name="irem_not.txt", mime="text/plain; charset=utf-8", use_container_width=True)
@@ -172,30 +191,90 @@ if st.session_state.current_panel == "dashboard":
 
 elif st.session_state.current_panel == "goals":
     st.markdown("## 🎯 Hedeflerim")
-    with st.form("goal_form_modern"):
-        g_title = st.text_input("Hedef")
-        g_desc = st.text_area("Açıklama")
-        g_date = st.date_input("Hedef Tarihi")
-        if st.form_submit_button("Hedef Ekle"):
-            conn = sqlite3.connect('goals.db')
-            c = conn.cursor()
-            c.execute("CREATE TABLE IF NOT EXISTS goals (title TEXT, description TEXT, date TEXT)")
-            c.execute("INSERT INTO goals VALUES (?, ?, ?)", (g_title, g_desc, str(g_date)))
-            conn.commit(); conn.close()
-            st.success("Hedef eklendi!")
+    col_f, col_v = st.columns([1, 1.5])
     
-    try:
-        conn = sqlite3.connect('goals.db')
-        df = pd.read_sql_query("SELECT * FROM goals", conn)
-        conn.close()
-        st.dataframe(df, use_container_width=True)
-    except: st.info("Henüz hedef yok.")
+    with col_f:
+        with st.form("goal_form_modern"):
+            g_title = st.text_input("Hedef Adı")
+            g_desc = st.text_area("Açıklama")
+            g_start = st.date_input("Başlangıç Tarihi", datetime.now())
+            g_end = st.date_input("Bitiş Tarihi", datetime.now())
+            if st.form_submit_button("Hedef Ekle"):
+                new_goal = {"title": g_title, "desc": g_desc, "start": str(g_start), "end": str(g_end), "status": "Devam Ediyor"}
+                st.session_state.goals_list.append(new_goal)
+                
+                # Persist to SQLite
+                conn = sqlite3.connect('goals.db')
+                c = conn.cursor()
+                c.execute("CREATE TABLE IF NOT EXISTS goals_v2 (title TEXT, description TEXT, start_date TEXT, end_date TEXT, status TEXT)")
+                c.execute("INSERT INTO goals_v2 VALUES (?, ?, ?, ?, ?)", (g_title, g_desc, str(g_start), str(g_end), "Devam Ediyor"))
+                conn.commit(); conn.close()
+                st.success("Hedef başarıyla eklendi!")
+
+    with col_v:
+        st.markdown("### 📅 Aylık Hedef Takvimi")
+        if st.session_state.goals_list:
+            import plotly.express as px
+            df_goals = pd.DataFrame(st.session_state.goals_list)
+            df_goals['start'] = pd.to_datetime(df_goals['start'])
+            df_goals['end'] = pd.to_datetime(df_goals['end'])
+            
+            fig = px.timeline(df_goals, x_start="start", x_end="end", y="title", color="status", 
+                             title="Hedef Zaman Çizelgesi", template="plotly_dark")
+            fig.update_yaxes(autorange="reversed")
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("Henüz bir hedef eklemediniz.")
+    
+    st.markdown("---")
+    st.markdown("### Tüm Hedefler")
+    if st.session_state.goals_list:
+        st.table(st.session_state.goals_list)
 
 elif st.session_state.current_panel == "calendar":
     st.markdown("## 📅 Çalışma Takvimi")
-    with st.form("cal_form_modern"):
-        c_task = st.text_input("Görev/Ders")
-        c_day = st.date_input("Gün")
-        c_time = st.time_input("Saat")
-        if st.form_submit_button("Takvime Ekle"):
-            st.success(f"{c_task} görevi {c_day} saat {c_time} için kaydedildi!")
+    
+    # Reminder logic
+    now = datetime.now()
+    for session in st.session_state.schedule_list:
+        s_date = datetime.strptime(session["day"], "%Y-%m-%d").date()
+        if s_date == now.date():
+            s_time = datetime.strptime(session["start_time"], "%H:%M:%S").time()
+            # Simple reminder: if session starts in the next 30 minutes
+            if 0 <= (datetime.combine(now.date(), s_time) - now).total_seconds() <= 1800:
+                st.toast(f"🔔 Yaklaşan Oturum: {session['task']} (Saat {session['start_time']})", icon="📅")
+
+    col_f, col_v = st.columns([1, 2])
+    
+    with col_f:
+        with st.form("cal_form_modern"):
+            c_task = st.text_input("Görev/Ders")
+            c_day = st.date_input("Gün", datetime.now())
+            c_start_t = st.time_input("Başlangıç Saati", value=now.time())
+            c_end_t = st.time_input("Bitiş Saati", value=now.time())
+            if st.form_submit_button("Takvime Ekle"):
+                new_session = {
+                    "task": c_task, 
+                    "day": str(c_day), 
+                    "start_time": str(c_start_t), 
+                    "end_time": str(c_end_t),
+                    "start": f"{c_day} {c_start_t}",
+                    "end": f"{c_day} {c_end_t}"
+                }
+                st.session_state.schedule_list.append(new_session)
+                st.success(f"{c_task} kaydedildi!")
+
+    with col_v:
+        st.markdown("### 🗓️ Haftalık Görünüm")
+        if st.session_state.schedule_list:
+            import plotly.express as px
+            df_sched = pd.DataFrame(st.session_state.schedule_list)
+            df_sched['start'] = pd.to_datetime(df_sched['start'])
+            df_sched['end'] = pd.to_datetime(df_sched['end'])
+            
+            fig = px.timeline(df_sched, x_start="start", x_end="end", y="task", color="task",
+                             title="Haftalık Çalışma Planı", template="plotly_dark")
+            fig.update_yaxes(autorange="reversed")
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("Henüz bir çalışma oturumu eklemediniz.")

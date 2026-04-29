@@ -8,13 +8,13 @@ from langchain_core.messages import AIMessage, SystemMessage
 from .state import AgentState
 
 class MockLLM:
-    """Mock LLM class for fallback and orchestration signaling."""
+    """Fallback LLM — gerçek LLM bağlanamadığında kullanılır."""
     def __init__(self, *args, **kwargs):
         pass
-    def invoke(self, prompt):
-        return AIMessage(content="Mock response")
-    async def ainvoke(self, prompt):
-        return AIMessage(content="Mock response")
+    def invoke(self, prompt, **kwargs):
+        return type('obj', (object,), {'content': 'Bağlantı hatası, lütfen tekrar deneyin.'})()
+    async def ainvoke(self, prompt, **kwargs):
+        return type('obj', (object,), {'content': 'Bağlantı hatası, lütfen tekrar deneyin.'})()
 
 # ─── Quotes library ────────────────────────────────────────────────────────────
 QUOTES = {
