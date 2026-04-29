@@ -209,10 +209,10 @@ if _active_task:
     """, unsafe_allow_html=True)
     
     # Toast trigger (only once)
-    _task_id = f"{_task_name}_{_active_task['day']}_{_active_task['start_time']}"
-    if _task_id not in st.session_state.shown_reminders:
+    _task_toast_key = f"toast_shown_{_task_name}"
+    if not st.session_state.get(_task_toast_key, False):
         st.toast(f"⏰ Çalışma zamanı! Görev: {_task_name}", icon="⏰")
-        st.session_state.shown_reminders.add(_task_id)
+        st.session_state[_task_toast_key] = True
 
 
 # --- SIDEBAR ---
@@ -248,20 +248,6 @@ with st.sidebar:
 # --- MAIN DASHBOARD ---
 if st.session_state.current_panel == "dashboard":
     now = now_istanbul()
-
-    # ─── Dashboard reminder check (1-minute precision) ────────────────────────────────
-    now_ts = now_istanbul()
-    for _s in st.session_state.schedule_list:
-        try:
-            _sd = datetime.strptime(_s["day"], "%Y-%m-%d").date()
-            if _sd == now_ts.date():
-                _st_time = datetime.strptime(_s["start_time"], "%H:%M:%S").time()
-                _diff = (datetime.combine(_sd, _st_time) - now_ts.replace(tzinfo=None)).total_seconds()
-                if abs(_diff) <= 60:  # Within 1 minute of start time
-                    st.toast(f"⏰ Çalışma zamanı! Görev: {_s['task']}", icon="⏰")
-                    st.warning(f"⏰ Çalışma zamanı! **Görev: {_s['task']}** — {_s['start_time']}")
-        except Exception:
-            pass
 
     # Metrics
     m1, m2, m3, m4 = st.columns(4)
@@ -469,19 +455,6 @@ elif st.session_state.current_panel == "calendar":
     st.markdown("## 📅 Çalışma Takvimi")
     now = now_istanbul()
     
-    # Reminder logic — 1-minute precision, toast + warning
-    for session in st.session_state.schedule_list:
-        try:
-            s_date = datetime.strptime(session["day"], "%Y-%m-%d").date()
-            if s_date == now.date():
-                s_time = datetime.strptime(session["start_time"], "%H:%M:%S").time()
-                diff = (datetime.combine(s_date, s_time) - now.replace(tzinfo=None)).total_seconds()
-                if abs(diff) <= 60:  # Within 1 minute of start time
-                    st.toast(f"⏰ Çalışma zamanı! Görev: {session['task']}", icon="⏰")
-                    st.warning(f"⏰ Çalışma zamanı! **Görev: {session['task']}** — {session['start_time']}")
-        except Exception:
-            pass
-
     col_f, col_v = st.columns([1, 2])
     
     with col_f:
